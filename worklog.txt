@@ -1,0 +1,45 @@
+Port of the excellent SCMonitor from Steve Cousins https://smallcomputercentral.com/
+
+Goals: 
+    1. Rework source to be compiled under sjasmplus https://github.com/z00m128/sjasmplus (Documentation here: http://z00m128.github.io/sjasmplus/documentation.html)
+        This was originally compiled under Steve's custom development environment Small Computer Workshop: https://smallcomputercentral.com/small-computer-workshop/
+        Why? I like a challenge. I'm using a Mac. The code is modular and well layed out.
+        The main issue is that Steve is using his own standard for compiler directives that need to be translated to more universal ones
+        Ideally this should just be a series of translations that can be applied to a new release of SCMonitor
+        Should yield binary equivalent output files
+
+    2. Add hardware support for the Z80 Retro board by Peter Wilson: https://github.com/peterw8102/Z80-Retro
+        Why? This board has a wide variety of hardware support (banked ROM/RAM, SIO, CTC, RTC, SPI, i2c) although it isn't as developed as the RC2014 or MGH z80 projects
+        Known Challenge is that this has a funky io map for the SIO that doesn't match a known config
+
+Worklog:
+
+Create working fork:
+- Downloaded source from https://smallcomputercentral.com/small-computer-monitor-v1-3/
+- Created an SCM Github Repository
+- Unzip and move the code from SCMonitor directory to SCM
+- Check in code
+
+Scope problem:
+- Determine all directives used in code
+- Wrote awk script to extract all directives in *.asm (see scw2sjasm.sh)
+#DEFINE
+#ELSE
+#ENDIF
+#ENDIF
+#IF
+#IFDEF
+#IFNDEF
+#INCLUDE
+#INSERTHEX
+#TARGET
+#UNDEFINE
+
+- ToDo: map these directives to sjasmplus equivalents
+- Luckly comments (;) are similarly treated 
+- OBS! directives are # in column 0 whereas sjasplus expects pseudo operators (start of line whitespace required) and only labels can be in column 0
+- Defined awk for all statements that apply and tested
+- missing #INSERTHEX (if using ROM BASIC or CPM)
+- missing #TARGET (not needed only for SCW)
+- check back in
+
