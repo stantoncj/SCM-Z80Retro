@@ -1,6 +1,6 @@
 # modify .asm files from SCWorkshop (https://smallcomputercentral.com/) to sjasmplus directives
 
-# What tokens are actually in use?
+# Discover What tokens are actually in use:
 # find . -type f -name '*.asm' -exec awk '/^(#[^\s\\]+)/{print $1;}' '{}' \; | sort | uniq
 
 # This a static list based on SCM v1.3 (i.e. output from above run in /SCMonitor/Source )
@@ -91,10 +91,10 @@
 #================================================================================
 #DEFAULT ACTION 
 #================================================================================
+# comment this out to only print modified lines
 
-{print}
+#{print}
 
 #================================================================================
 
 #EOF
-
