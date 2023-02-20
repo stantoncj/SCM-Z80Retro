@@ -43,3 +43,7 @@ Scope problem:
 - missing #TARGET (not needed only for SCW)
 - check back in
 
+- move to awk file to debug multiline awk
+- runs without quotes but only runs first command #DEFINE and doubles up line?  Check what the !\^ statement is?
+- corrected awk file to match and alter only lines matched i.e. {print; next;} and default to {print} for all other lines
+- tests correctly against !Main.asm (#DEFINE and #INCLUDE)

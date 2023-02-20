@@ -31,8 +31,8 @@
 #	DEFINE+ xBUILD_AS_COM_FILE ;Build as CP/M style .COM file (not as ROM)
 
 # transform - strip #, add tab, changes DEFINE to DEFINE+
-'!/^#DEFINE/ {print;next} gsub(/#DEFINE/,"\tDEFINE+",$1)'
-'!/^#UNDEFINE/ {print;next} gsub(/#/,"\t",$1)'
+/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); print; next} 
+/^#UNDEFINE/ {gsub(/#/,"\t",$1); print; next} 
 
 
 #================================================================================
@@ -43,10 +43,10 @@
 #IFNDEF
 #================================================================================
 
-# These all behave as expected, still need to move them into OPS colum
-'!/^#IF(.+)/ {print;next} gsub(/#/,"\t",$1)'
-'!/^#ELSE(.+)/ {print;next} gsub(/#/,"\t",$1)'
-'!/^#ENDIF(.+)/ {print;next} gsub(/#/,"\t",$1)'
+# These all behave as expected once moved into OP column
+/^#IF(.+)/ {gsub(/#/,"\t",$1); print; next} 
+/^#ELSE(.+)/ {gsub(/#/,"\t",$1); print; next} 
+/^#ENDIF(.+)/ {gsub(/#/,"\t",$1); print; next}
 
 #================================================================================
 #INCLUDE
@@ -59,7 +59,7 @@
 #   INCLUDE BIOS/Framework/Devices/StatusLED.asm
 
 # transform - strip #, add tab, backslash to slash in filename
-'!/^#INCLUDE/ {print;next} gsub(/#/,"\t",$1) gsub(/\\/,"/")'
+/^#INCLUDE/ {gsub(/#/,"\t",$1) gsub(/\\/,"/"); print; next} 
 
 #================================================================================
 #INSERTHEX
@@ -70,10 +70,10 @@
 
 #sjasmplus equivalent: (NONE!)
 # Used to include BASIC/CPM hex into the build ROM.
-# Can we use INSERT which inserts BIN instead of .HEX?
+# Strategy: build a script which finds and converts hex to bin and then use INSERT?
 
 # transform - comment out line
-'!/^#INSERTHEX/ {print;next} gsub(/#/,"; #",$1)'
+/^#INSERTHEX/ {gsub(/#/,"; #",$1); print; next} 
 
 #================================================================================
 #TARGET
@@ -86,7 +86,13 @@
 # Only used as an SCW directive
 
 # transform - comment out line
-'!/^#TARGET/ {print;next} gsub(/#/,"; #",$1)'
+/^#TARGET/ {gsub(/#/,"; #",$1); print; next}
+
+#================================================================================
+#DEFAULT ACTION 
+#================================================================================
+
+{print}
 
 #================================================================================
 
