@@ -21,6 +21,6 @@
 
 # Detailed transforms can be found in scw2sjam.awk
 
-find . -type f -name '*.asm' -exec awk -f ./scw2sjasm.awk '{}' \;
+find . -type f -name '*.asm' -exec gawk -i inplace -f ./scw2sjasm.awk '{}' \;
 
 #EOF

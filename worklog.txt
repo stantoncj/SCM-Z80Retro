@@ -52,3 +52,22 @@ Scope problem:
 - chmod 755 scw2sjasm.sh 
 - shell script runs correctly for debug
 - check in code
+
+- pre-reqs: (on OSX 10.15.7 Catalina):
+- the default OSX distribution of awk lacks -i INPLACE support (WTF Apple?)
+- install brew:
+- brew install gawk
+- did a brew update (3 hours), why do I do this to myself?  Note to self to remove some old experiments: awscli, mongodb, kubernetes-cli, openjdk, mysql-client, helm, node, kubernetes-cli, etc. audit this!
+- got -i infile to work correctly, modified all files in tree
+
+- ran ./scw2sjasm.sh to modify directives in all files
+- ran sjasmplus '!Main.asm' to compile, next issue:
+
+API.asm(21): error: Unrecognized instruction: .CODE
+FDOS.asm(7): error: Unrecognized instruction: .CODE
+
+- commented this out as there is no equivalent in sjasmplus
+
+
+
+
