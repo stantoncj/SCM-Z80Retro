@@ -68,6 +68,71 @@ FDOS.asm(7): error: Unrecognized instruction: .CODE
 
 - commented this out as there is no equivalent in sjasmplus
 
+next issue:
+.DB entries using backslash for "divided by", have to flip the backslash to slash
+
+kaCodeBeg:  .DB  CodeBegin\256  ;0x004E  Start of SCM code (hi byte)
+
+- resolved with awk section to flip backslash to slash
+
+revisited .DATA which was solved in same block as .CODE, may need to revisit this as it seperates ROM code from RAM.
+
+- next issue:
+.EQU / .SET - used to set variable values
+
+While .EQU is compilable it is discouraged
+Generic_Z50Bus.asm(22): error: Unrecognized instruction: .SET 0x88
+
+kSIO1:  .EQU 0x80             ;Base address of serial Z80 SIO #1
+kSIO1:  .SET 0x80             ;Base address of serial Z80 SIO #1
+
+Replace both with =, strip : from label
+
+- Errors: 285, warnings: 758, compiled: 10494 lines, work time: 0.060 seconds
+
+- next issue
+.HEXCHAR  {statement}
+Converts the statement value to a single ASCII hex character 
+i.e. 
+.HEXCHAR 0xF outputs the byte 'F'
+.HEXCHAR 0x0 outputs the byte '0'
+- no equivalent SJASMPLUS command, use LUA script inserted by awk
+
+Substitute in this LUA function:
+	LUA ALLPASS
+		digit = _c(" kACIABase & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+
+Errors: 265, warnings: 758, compiled: 10574 lines, work time: 0.061 seconds
+Removed 20 errors!
+
+-next issue:
+In SCW @Label is treated as a local label
+I suspect this operates in the same way as .Label works in sjasmplus
+
+Let's transform in awk and see if it gets remedied
+Worked, transform all @ to ., seems this symbol is only use for local labels (maybe)
+
+Errors: 31, warnings: 568, compiled: 10574 lines, work time: 0.050 seconds
+
+Removed 245 errors and 190 warnings!
+
+- next issue:
+Begin.asm(11): error: Label not found: Z80
+  11++0000              	IF Z80 = "Z80"
+  12++0000 ~                        .PROC Z80           ;Select processor for SCWorkshop
+  13++0000              	ENDIF
+
+Z80 must be a predefine value, not really useful to us as we are not supporting any alternative Z80 extensions ala Z180
+lets just make the IF line always false but keep the compiler happy
+
+next issue:
+Truncation of values
+Alpha.asm(219): warning: value 0x105 is truncated to 8bit value: 0x05
+Alpha.asm(344): warning: value 0x113E8 is truncated to 16bit value: 0x13E8
+
+
 
 
 

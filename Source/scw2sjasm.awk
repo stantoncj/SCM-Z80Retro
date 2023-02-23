@@ -30,8 +30,8 @@
 #sjasmplus equivalent: (whitespace start, note define+ behaves properly with no replacement value )
 #	DEFINE+ xBUILD_AS_COM_FILE ;Build as CP/M style .COM file (not as ROM)
 
-# transform - strip #, add tab, changes DEFINE to DEFINE+
-/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); print; next} 
+# transform - strip #, add tab, changes DEFINE to DEFINE+, quote values
+/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); $3="\""$3"\""; print; next} 
 /^#UNDEFINE/ {gsub(/#/,"\t",$1); print; next} 
 
 
@@ -90,19 +90,99 @@
 
 
 #================================================================================
-# .directives
+# .directives and other misc fixes
 
 #================================================================================
-#.CODE
+#.CODE/.DATA
 #================================================================================
 
-# SCW example:
+# SCW example:  Indicates CODE and DATA sections for relocation into ROM/RAM?
 #   .CODE
+#   .DATA
 
 # sjasmplus equivalent: None, code is just assumed
 
 # transform - comment out line
 /^(\s+)\.CODE/ {gsub(/.CODE/,"\n;"$0,$0); print; next}
+/^(\s+)\.DATA/ {gsub(/.DATA/,"\n;"$0,$0); print; next}
+
+#================================================================================
+#.EQU/.SET
+#================================================================================
+
+# SCW example:
+#kSIO1:  .EQU 0x80             ;Base address of serial Z80 SIO #1
+#kSIO1:  .SET 0x80             ;Base address of serial Z80 SIO #1
+
+# sjasmplus equivalent: Should use = symbol for both
+
+# transform - remove : and replace with =
+/\.EQU/ {gsub(/:/,""); gsub(/.EQU/,"="); print; next}
+/\.SET/ {gsub(/:/,""); gsub(/.SET/,"="); print; next}
+
+#================================================================================
+#.DB with divisor
+#================================================================================
+
+# SCW example:
+# kaCodeBeg:  .DB  CodeBegin\256  ;0x004E  Start of SCM code (hi byte)
+
+# sjasmplus equivalent: Slash is just backwards, SCW must flip all slashes
+
+# transform - swap backslash for slash
+/\.DB.+\\/ { gsub(/\\/,"/",$0); print; next} 
+
+#================================================================================
+#.HEXCHAR 
+#================================================================================
+
+# SCW example:
+#            .HEXCHAR kACIABase \ 16
+#            .HEXCHAR kACIABase & 15
+# 
+# Outputs ascii hex string of value without leading zeros
+
+# sjasmplus equivalent: None, but we can fake it with LUA script
+
+# transform
+/\.HEXCHAR / { $1=""; gsub(/\\/,"/",$0); gsub(/\r/,"",$0);
+    print ";\tHEXCHAR - Output hex digit from value"
+    print "\tLUA ALLPASS"
+    printf "\t\tdigit = _c(\"%s\")\n",$0
+    print "\t\tif (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end" 
+    print "\tENDLUA";  
+next}
+
+#    LUA ALLPASS
+#        digit = _c("kACIABase / 16")
+#        if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+#    ENDLUA
+
+#================================================================================
+#@Label - Local Labels
+#================================================================================
+
+# SCW example:
+#@Loop:
+# 
+# Suspect this is local to the prior non-local label 
+
+# sjasmplus equivalent: uses .Label as local after non-local label
+#.Loop:
+/@/ {gsub(/@/,".",$0); print; next}
+
+#================================================================================
+#IF Z80 - Predefined value
+#================================================================================
+
+# SCW example:
+#              	IF Z80 = "Z80"
+#                  .PROC Z80           ;Select processor for SCWorkshop
+#              	ENDIF
+
+# sjasmplus equivalent: none and not needed, just make the IF statement false but understandable to the compiler
+#.Loop:
+/IF Z80/ {gsub(/IF Z80/,"IF \"Z80 Type\"",$0); print; next}
 
 #================================================================================
 #DEFAULT ACTION 
