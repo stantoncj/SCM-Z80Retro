@@ -127,6 +127,37 @@ Begin.asm(11): error: Label not found: Z80
 Z80 must be a predefine value, not really useful to us as we are not supporting any alternative Z80 extensions ala Z180
 lets just make the IF line always false but keep the compiler happy
 
+Z80 is a substitution from DEFINE+
+SCW: IF is not doing a literal substitution, but considering it a string to compare
+
+    DEFINE+ PROCESSOR Z80
+    IF PROCESSOR = "Z80"
+
+This gets literaly substituted in so:
+    IF Z80 = "Z80"
+
+Modified DEFINE+ to put values in quotes:  
+    DEFINE+ PROCESSOR "Z80"
+
+When expanded:
+    IF "Z80" = "Z80"
+
+Does not affect IFDEF etc.
+
+Errors: 6, warnings: 547, compiled: 10593 lines, work time: 0.089 seconds
+
+- next problem: #DB is like .DB???
+Just substitute # for .
+
+Bug in quoted DEFINE+ for already quoted defines!
+Fixed to not double quote quoted DEFINE+S
+Fixed to not create null strings
+
+ZERO!  Compiles something which is probably wrong, but compiles!
+Errors: 0, warnings: 547, compiled: 10599 lines, work time: 0.060 seconds
+
+
+
 next issue:
 Truncation of values
 Alpha.asm(219): warning: value 0x105 is truncated to 8bit value: 0x05

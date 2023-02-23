@@ -6,7 +6,43 @@
 	LUA ALLPASS
 ;	HEXCHAR - Output hex digit from value
 	LUA ALLPASS
-		digit = _c(" = _c(" = _c(" .HEXCHAR kACIABase / 16")")")
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" .HEXCHAR kACIABase / 16")")")")")")")")")")")")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
 		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
 	ENDLUA
 		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
@@ -19,7 +55,43 @@
 	LUA ALLPASS
 ;	HEXCHAR - Output hex digit from value
 	LUA ALLPASS
-		digit = _c(" = _c(" = _c(" .HEXCHAR kACIABase & 15")")")
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" = _c(" .HEXCHAR kACIABase & 15")")")")")")")")")")")")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
 		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
 	ENDLUA
 		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end

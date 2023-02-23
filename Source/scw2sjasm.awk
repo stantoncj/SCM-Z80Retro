@@ -30,8 +30,8 @@
 #sjasmplus equivalent: (whitespace start, note define+ behaves properly with no replacement value )
 #	DEFINE+ xBUILD_AS_COM_FILE ;Build as CP/M style .COM file (not as ROM)
 
-# transform - strip #, add tab, changes DEFINE to DEFINE+, quote values
-/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); $3="\""$3"\""; print; next} 
+# transform - strip #, add tab, changes DEFINE to DEFINE+, quote values so IF compares work correctly, do not double quote or allow null strings
+/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); if(length($3) > 0 && index($3,"\"") == 0){ gsub(/\r/,"",$3); $3="\""$3"\"";} gsub(/""/,"\" \"",$3); print; next} 
 /^#UNDEFINE/ {gsub(/#/,"\t",$1); print; next} 
 
 
@@ -88,11 +88,24 @@
 # transform - comment out line
 /^#TARGET/ {gsub(/#/,"; #",$1); print; next}
 
-
 #================================================================================
 # .directives and other misc fixes
 
 #================================================================================
+
+#================================================================================
+#.PROC
+#================================================================================
+
+# SCW example:
+#                         .PROC Z80           ;Select processor for SCWorkshop
+
+#sjasmplus equivalent: (NONE!)
+# Only used as an SCW directive
+
+# transform - comment out line
+/\.PROC/ {printf ";%s",$0; next}
+
 #.CODE/.DATA
 #================================================================================
 
@@ -131,6 +144,19 @@
 
 # transform - swap backslash for slash
 /\.DB.+\\/ { gsub(/\\/,"/",$0); print; next} 
+
+#================================================================================
+##DB with string
+#================================================================================
+
+# SCW example:
+# kaCodeBeg:  .DB  CodeBegin\256  ;0x004E  Start of SCM code (hi byte)
+
+# sjasmplus equivalent: Looks like the #DB is string related, just use .DB and let the compiler work it out
+
+# transform - swap backslash for slash
+/#DB/ { gsub(/#/,".",$0); print; next} 
+
 
 #================================================================================
 #.HEXCHAR 
