@@ -106,19 +106,6 @@
 # transform - comment out line
 /\.PROC/ {printf ";%s",$0; next}
 
-#.CODE/.DATA
-#================================================================================
-
-# SCW example:  Indicates CODE and DATA sections for relocation into ROM/RAM?
-#   .CODE
-#   .DATA
-
-# sjasmplus equivalent: None, code is just assumed
-
-# transform - comment out line
-/^(\s+)\.CODE/ {gsub(/.CODE/,"\n;"$0,$0); print; next}
-/^(\s+)\.DATA/ {gsub(/.DATA/,"\n;"$0,$0); print; next}
-
 #================================================================================
 #.EQU/.SET
 #================================================================================
@@ -146,16 +133,16 @@
 /\.DB.+\\/ { gsub(/\\/,"/",$0); print; next} 
 
 #================================================================================
-##DB with string
+##DB variation of .DB
 #================================================================================
 
 # SCW example:
-# kaCodeBeg:  .DB  CodeBegin\256  ;0x004E  Start of SCM code (hi byte)
+# szCDate:    #DB  CDATE          ; Build date. eg: "20190627"
 
-# sjasmplus equivalent: Looks like the #DB is string related, just use .DB and let the compiler work it out
+# sjasmplus equivalent: #DB is just .DB with interpretation, just use .DB as that is properly interpreted
 
-# transform - swap backslash for slash
-/#DB/ { gsub(/#/,".",$0); print; next} 
+# transform - 
+/#DB/ { gsub(/#/,".",$0); gsub(/\\/,"/",$0); print; next} 
 
 
 #================================================================================
@@ -166,7 +153,7 @@
 #            .HEXCHAR kACIABase \ 16
 #            .HEXCHAR kACIABase & 15
 # 
-# Outputs ascii hex string of value without leading zeros
+# Outputs single ascii hex character from the value
 
 # sjasmplus equivalent: None, but we can fake it with LUA script
 
@@ -198,17 +185,56 @@ next}
 /@/ {gsub(/@/,".",$0); print; next}
 
 #================================================================================
-#IF Z80 - Predefined value
+#.DATA / .CODE
 #================================================================================
 
 # SCW example:
-#              	IF Z80 = "Z80"
-#                  .PROC Z80           ;Select processor for SCWorkshop
-#              	ENDIF
+#   .DATA
+#   .ORG 0xFC00
+#   .CODE
+# 
+# Switches context for .ORG to DATA segement, essentially runs two different Program Counters
 
-# sjasmplus equivalent: none and not needed, just make the IF statement false but understandable to the compiler
-#.Loop:
-/IF Z80/ {gsub(/IF Z80/,"IF \"Z80 Type\"",$0); print; next}
+# sjasmplus equivalent: None, but we can fake it with LUA script
+
+# transform
+# LUA needs to initialize PC variables or they are just random values
+# SCW must set these to 0 by default
+{if (FILENAME == "./!Main.asm" && NR == 1){
+    print ";\tInitialize .CODE and .DATA PC"
+    print "\tLUA ALLPASS"
+    print "\t\tcode_pc = 0"
+    print "\t\tdata_pc = 0"    
+    print "\tENDLUA";  
+}}
+
+/\.DATA/ {
+    print ";\t.DATA - Switch context to Data PC"
+    print "\tLUA ALLPASS"
+    print "\t\tcode_pc = sj.current_address"
+    print "\t\t_pc(\".ORG 0x\"..string.format(\"%X\",data_pc))" 
+    print "\tENDLUA";  
+next}
+
+/\.CODE/ {
+    print ";\t.CODE - Switch context to Code PC"
+    print "\tLUA ALLPASS"
+    print "\t\tdata_pc = sj.current_address\n"
+    print "\t\t_pc(\".ORG 0x\"..string.format(\"%X\",code_pc))" 
+    print "\tENDLUA";
+next}
+
+#   ;   .DATA - Switch context to Data PC
+#	LUA ALLPASS
+#		code_address = sj.current_address
+#		_pc(".ORG 0x"....string.format(\"%X\",data_address))
+#	ENDLUA
+#
+#   ;   .CODE - Switch context to Code PC
+#	LUA ALLPASS
+#		data_address = sj.current_address
+#		_pc(".ORG 0x"....string.format(\"%X\",code_address))
+#	ENDLUA
 
 #================================================================================
 #DEFAULT ACTION 

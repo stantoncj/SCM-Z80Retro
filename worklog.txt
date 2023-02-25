@@ -156,14 +156,91 @@ Fixed to not create null strings
 ZERO!  Compiles something which is probably wrong, but compiles!
 Errors: 0, warnings: 547, compiled: 10599 lines, work time: 0.060 seconds
 
+- next problem: Monitor is not assembling to fit into the space defined and overflows RAM 
+
+Monitor.asm
+Monitor.asm(151): warning: RAM limit exceeded 0x10000 by ORG
+
+Must be size of the defined fields or the math to calculate offsets
+
+Nope.. maybe #DB is a volatile that is relocated to .DATA?
+
+Confirmed from Steve Cousins that this is simply .DB with statement interpretation,
+so 
+    .DB 0xFF
+works, but
+    .DB SIO_Set
+does not, it needs
+    #DB SIO_Set
+to interpret the define
+
+- next problem: Monitor is not assembling to fit into the space defined and overflows RAM 
+
+From .lst:
+ 150++FFFC 65 05
+ Monitor.asm(151): warning: RAM limit exceeded 0x10000 by ORG
+
+Lets calculate manually and figure out where it's miscounted
+In Monitor.asm: (from .lst)
+  43++079C                          .ORG  kMonData      ;Establish workspace/data area
+  44++FE80
+
+In Alpha.asm:   
+kMonData    .EQU kData + 0x0280
+
+and kData is defined in Config_Standard.asm
+; Memory map (data in RAM)
+kData:      .EQU 0xFC00         ;Typically 0xFC00 (to 0xFFFF)
+
+So kMonData is calculated at 0xFC00 + 0x0280 = 0xFE80 
+THIS IS CORRECT
+
+Suspicious that this exceeds RAM where this exists:
+ 145++FFAA              szCmdHelp:
+ 146++FFAA              	IFDEF IncludeHelp
+ 147++FFAA 4D 6F 6E 69              .DB  "Monitor commands:",kNewLine
+
+ To suss this out, lets comment out the #IncludeHelp in Config_Standard.asm and recompile
+This indeed fixes the Monitor.asm overflow problem
+
+Let's come back to that...
+kMonData needs to be recalculated if #IncludeHelp is defined
+Errors: 0, warnings: 479, compiled: 10564 lines, work time: 0.052 seconds
+
+Removed 68 warnings
+
+Just moved the overflow downstream: into UtilitiesM.asm
+ 182++FFFE FE 24                    CP   '$'            ;Does string start with '$' ?
+UtilitiesM.asm(183): warning: RAM limit exceeded 0x10000 by ORG
+
+AHA:
+
+.CODE and .DATA run different address counters
+
+an .ORG applies locally to .CODE or .DATA seperately?
+
+.DATA
+    .ORG 0x1000
+    .DB 0xFF    ; at 0x1000
+.CODE
+    .ORG 0xFF00
+    NOP         ; at 0xFF00
+.DATA
+    .DB 0x88    ; at 0x1001
+.CODE
+    NOP         ; at 0xFF01
+
+This mirrors zasm #DATA and #CODE
 
 
-next issue:
-Truncation of values
-Alpha.asm(219): warning: value 0x105 is truncated to 8bit value: 0x05
-Alpha.asm(344): warning: value 0x113E8 is truncated to 16bit value: 0x13E8
+Can we use LUA to simulate this?
 
+Pseudo:
 
+.DATA -> save current code PC, wait for org (or restore the data PC)
+.CODE -> restore current code PC
+.ORG  -> as long as .DATA and .CODE blocks are used regularly, this should just set the PC 
 
-
+Holy crap, that worked on the first try!
+Errors: 0, warnings: 6, compiled: 10721 lines, work time: 0.049 seconds
 
