@@ -244,3 +244,31 @@ Pseudo:
 Holy crap, that worked on the first try!
 Errors: 0, warnings: 6, compiled: 10721 lines, work time: 0.049 seconds
 
+Wrote LUA functions to swap back and forth and initialize code_pc and data_pc in initial file (!Main.asm)
+TODO: Make this non-hardcoded filename
+
+Warnings with IF statements comparing strings literals longer than 4 bytes
+Confirmed that this warning is legit in sjasmplus source, no way to suppress warning (as with some other warnings)
+Modified DEFINE to truncate literal strings to 4 characters
+Modified IF to truncate literal strings to 4 characters
+
+
+- Next problem
+
+SCW when compiled, regardless of ORG output is sequential and ORG just affects absolute addresses
+OUTPUT as seperate bin files
+
+Inserted OUTPUT after each ORG to change the output file
+Binaries look correct
+Output looks correct when moved to hex 
+Simply cat of binaries together works on first two 0000 and 0311, but is off by one by 044e
+
+Strategy:
+Build a combined .HEX files and run them back together to create the assembled .BIN (and then reHEX?)
+ 
+Seems to work, but now need to compare binaries and work through symbolic differences between compilers
+
+zasm supports #code and #data segments out of order?
+
+Switch to zasm as target to see if I can avoid the jigsaw puzzle
+

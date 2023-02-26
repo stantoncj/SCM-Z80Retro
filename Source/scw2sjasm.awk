@@ -1,6 +1,27 @@
-# modify .asm files from SCWorkshop (https://smallcomputercentral.com/) to sjasmplus directives
+# scw2sjasm - v1.0 - modify .asm files from SCWorkshop (https://smallcomputercentral.com/) to sjasmplus code
+#
+# Christian Stanton - written to be able to build SCM on OSX rather than install on SCW on Windows
+#                   - Kudos to Steve Cousins for SCWorkshop, SCMonitor and his help understanding SCW directives
 
-# Discover What tokens are actually in use:
+# Version 1.0
+# Built and tested with:
+# GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.0, GNU MP 6.2.1)
+# SjASMPlus Z80 Cross-Assembler v1.20.1 (https://github.com/z00m128/sjasmplus)
+# SCW036_SCM130_20220325 - From: https://smallcomputercentral.com/small-computer-monitor-v1-3/
+
+# Requirements to run: (for OSX)
+# Install brew (see https://brew.sh/)
+# Install gawk - brew install gawk (you cannot use the distributed OSX awk which is and old distro and missing essential commands)
+# Install sjasmplus - https://github.com/z00m128/sjasmplus/blob/master/INSTALL.md (you may have to install other tools to have this make correctly)
+# If commands from Terminal refuse to run, you need to run from Finder once and then allow execution in Control Panel
+
+# Known bugs:
+# 
+# sjasmplus only compares the first 4 bytes of string constants -> no string constants can be non-unique in left most 4 characters
+# this is not a problem in the existing SCM code base
+#
+
+# Discover What directives are actually in use:
 # find . -type f -name '*.asm' -exec awk '/^(#[^\s\\]+)/{print $1;}' '{}' \; | sort | uniq
 
 # This a static list based on SCM v1.3 (i.e. output from above run in /SCMonitor/Source )
@@ -31,9 +52,9 @@
 #	DEFINE+ xBUILD_AS_COM_FILE ;Build as CP/M style .COM file (not as ROM)
 
 # transform - strip #, add tab, changes DEFINE to DEFINE+, quote values so IF compares work correctly, do not double quote or allow null strings
-/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); if(length($3) > 0 && index($3,"\"") == 0){ gsub(/\r/,"",$3); $3="\""$3"\"";} gsub(/""/,"\" \"",$3); print; next} 
+#             for defines longer than 4 bytes that are non-quoted, limit to 4 bytes.  This is a limit in sjasmplus IF string compare
+/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); if(length($3) > 0 && index($3,"\"") == 0 && index($3,";") == 0){ if(length($3)>4){$3=substr($3,1,4);} gsub(/\r/,"",$3); $3="\""$3"\"";} gsub(/""/,"\" \"",$3); print; next} 
 /^#UNDEFINE/ {gsub(/#/,"\t",$1); print; next} 
-
 
 #================================================================================
 #IF
@@ -44,7 +65,8 @@
 #================================================================================
 
 # These all behave as expected once moved into OP column
-/^#IF(.+)/ {gsub(/#/,"\t",$1); print; next} 
+# for compares longer than 4 bytes that are non-quoted, limit to 4 bytes.  This is a limit in sjasmplus IF string compare
+/^#IF(.+)/ {gsub(/#/,"\t",$1); if(index($4,"\"") && length($4)>=6){$4="\"" substr($4,2,4) "\""} print; next} 
 /^#ELSE(.+)/ {gsub(/#/,"\t",$1); print; next} 
 /^#ENDIF(.+)/ {gsub(/#/,"\t",$1); print; next}
 
@@ -200,27 +222,39 @@ next}
 # transform
 # LUA needs to initialize PC variables or they are just random values
 # SCW must set these to 0 by default
-{if (FILENAME == "./!Main.asm" && NR == 1){
-    print ";\tInitialize .CODE and .DATA PC"
+# Would be prettier to insert this after the first comment block
+{if (FILENAME == main && NR == 1){
+    while(substr($0,1,1) == ";"){ # insert after the first comment block
+        print
+        getline
+    }
+    print "\n; Processed by scw2sjasm to modify code from SCWorkshop to sjasmplus"
+    print ";\n; Initialize .CODE and .DATA PC"
     print "\tLUA ALLPASS"
     print "\t\tcode_pc = 0"
     print "\t\tdata_pc = 0"    
-    print "\tENDLUA";  
+    print "\tENDLUA";
+    output_file = FILENAME
+    sub(/\.asm/,".bin",output_file)
+    print "\n\tOUTPUT " output_file
 }}
 
 /\.DATA/ {
     print ";\t.DATA - Switch context to Data PC"
     print "\tLUA ALLPASS"
     print "\t\tcode_pc = sj.current_address"
-    print "\t\t_pc(\".ORG 0x\"..string.format(\"%X\",data_pc))" 
-    print "\tENDLUA";  
+    print "\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))" 
+    print "\t\t_pc(\"OUTPUT Output/data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")" 
+    print "\tENDLUA";
+#    print "\tOUTPUT output\\output_%s\n" string.format(\"%X\",data_pc) ".bin"
 next}
 
 /\.CODE/ {
     print ";\t.CODE - Switch context to Code PC"
     print "\tLUA ALLPASS"
-    print "\t\tdata_pc = sj.current_address\n"
-    print "\t\t_pc(\".ORG 0x\"..string.format(\"%X\",code_pc))" 
+    print "\t\tdata_pc = sj.current_address"
+    print "\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
+    print "\t\t_pc(\"OUTPUT Output/code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")" 
     print "\tENDLUA";
 next}
 
