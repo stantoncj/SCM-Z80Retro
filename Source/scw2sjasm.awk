@@ -234,6 +234,8 @@ next}
     print "\t\tcode_pc = 0"
     print "\t\tdata_pc = 0"    
     print "\tENDLUA";
+    print "\n\tDEVICE NOSLOT64K"
+    print "\tSLDOPT COMMENT WPMEM, LOGPOINT, ASSERTION"
     output_file = FILENAME
     sub(/\.asm/,".bin",output_file)
     print "\n\tOUTPUT " output_file

@@ -1,0 +1,40 @@
+{
+    "configurations": [
+
+
+
+    {
+        "type": "dezog",
+        "request": "launch",
+        "name": "Simulator - Bare Z80",
+        "remoteType": "zsim",
+        "zsim": {
+            "visualMemory": true,
+            "memoryModel": "RAM",
+        },
+        "sjasmplus": [
+            {
+                "path": "!Main.sld"
+            }
+        ],
+        "commandsAfterLaunch": [],
+        "history": {
+            "reverseDebugInstructionCount": 1000000,
+            "spotCount": 10,
+            "codeCoverageEnabled": true
+        },
+        "startAutomatically": false,
+        "rootFolder": "${workspaceFolder}",
+        "loadObjs": [
+            {
+                "path": "Output/SCMonitor.bin",
+                "start": "0x0000"
+            }
+        ],
+        "execAddress": "0x0000",
+        "topOfStack": "0xFD00"
+    }
+    ]
+}
+
+

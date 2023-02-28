@@ -272,3 +272,10 @@ zasm supports #code and #data segments out of order?
 
 Switch to zasm as target to see if I can avoid the jigsaw puzzle
 
+Through the first few directives, hitting some of the same issues.
+
+Now at 
+11: #IF         PROCESSOR = "Z80"
+                                 ^ only one character allowed
+
+There is no string compare, so "Z80" will have to be redefined as a symbol/label
