@@ -27,7 +27,7 @@
         "rootFolder": "${workspaceFolder}",
         "loadObjs": [
             {
-                "path": "Output/SCMonitor.bin",
+                "path": "build/SCMonitor.bin",
                 "start": "0x0000"
             }
         ],

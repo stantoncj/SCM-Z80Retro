@@ -293,4 +293,8 @@ Modified code to use .ORG to also generate a new segment
 
 Now correctly debugs and runs 
 
-Produces an excess of files and a single FE00 code output stray 
+Produces an excess of files and a single FE00 code output stray
+Removed this in the link script
+
+Cleaned up shell and make scripts
+

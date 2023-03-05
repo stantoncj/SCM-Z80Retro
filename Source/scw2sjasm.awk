@@ -215,14 +215,12 @@ next}
 #   .ORG 0xFC00
 #   .CODE
 # 
-# Switches context for .ORG to DATA segement, essentially runs two different Program Counters
+# Switches context for .ORG between .DATA (RAM) and .CODE segement (ROM)
+# essentially runs two different Program Counters
 
 # sjasmplus equivalent: None, but we can fake it with LUA script
 
 # transform
-# LUA needs to initialize PC variables or they are just random values
-# SCW must set these to 0 by default
-# Would be prettier to insert this after the first comment block
 {if (FILENAME == main && NR == 1){
     while(substr($0,1,1) == ";"){ # insert after the first comment block
         print
@@ -233,7 +231,10 @@ next}
     print "\tLUA ALLPASS"
     print "\t\tcode_pc = 0"
     print "\t\tdata_pc = 0"
-    print "\t\tin_code = true"    
+    print "\t\tin_code = true"
+    if(!build_dir){ # modify this by including -v build_dir="./my_build_dir/" in the awk command line
+        print "\t\tbuild_dir = \"./build/\""
+    }
     print "\tENDLUA";
     print "\n\tDEVICE NOSLOT64K"
     print "\tSLDOPT COMMENT WPMEM, LOGPOINT, ASSERTION"
@@ -249,7 +250,7 @@ next}
     print "\t\t\tcode_pc = sj.current_address"
     print "\t\t\tin_code = false"
     print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))" 
-    print "\t\t\t_pc(\"OUTPUT Output/data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")" 
+    print "\t\t\t_pc(\"OUTPUT \"..build_dir..\"data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")" 
     print "\t\tend"
     print "\tENDLUA";
     next
@@ -262,7 +263,7 @@ next}
     print "\t\t\tdata_pc = sj.current_address"
     print "\t\t\tin_code = true"
     print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
-    print "\t\t\t_pc(\"OUTPUT Output/code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
+    print "\t\t\t_pc(\"OUTPUT \"..build_dir..\"code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
     print "\t\tend"
     print "\tENDLUA";
     next
@@ -275,11 +276,11 @@ next}
     print "\t\tif in_code then"
     print "\t\t\tcode_pc = _c(\""$2"\")"
     print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
-    print "\t\t\t_pc(\"OUTPUT Output/code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
+    print "\t\t\t_pc(\"OUTPUT \"..build_dir..\"code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
     print "\t\telse"
     print "\t\t\tdata_pc = _c(\""$2"\")"
     print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))"
-    print "\t\t\t_pc(\"OUTPUT Output/data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")"
+    print "\t\t\t_pc(\"OUTPUT \"..build_dir..\"data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")"
     print "\t\tend"
     print "\tENDLUA";    
     next
