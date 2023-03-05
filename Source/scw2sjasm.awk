@@ -207,7 +207,7 @@ next}
 /@/ {gsub(/@/,".",$0); print; next}
 
 #================================================================================
-#.DATA / .CODE
+#.DATA / .CODE / .ORG
 #================================================================================
 
 # SCW example:
@@ -232,7 +232,8 @@ next}
     print ";\n; Initialize .CODE and .DATA PC"
     print "\tLUA ALLPASS"
     print "\t\tcode_pc = 0"
-    print "\t\tdata_pc = 0"    
+    print "\t\tdata_pc = 0"
+    print "\t\tin_code = true"    
     print "\tENDLUA";
     print "\n\tDEVICE NOSLOT64K"
     print "\tSLDOPT COMMENT WPMEM, LOGPOINT, ASSERTION"
@@ -244,33 +245,45 @@ next}
 /\.DATA/ {
     print ";\t.DATA - Switch context to Data PC"
     print "\tLUA ALLPASS"
-    print "\t\tcode_pc = sj.current_address"
-    print "\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))" 
-    print "\t\t_pc(\"OUTPUT Output/data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")" 
+    print "\t\tif in_code then"
+    print "\t\t\tcode_pc = sj.current_address"
+    print "\t\t\tin_code = false"
+    print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))" 
+    print "\t\t\t_pc(\"OUTPUT Output/data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")" 
+    print "\t\tend"
     print "\tENDLUA";
-#    print "\tOUTPUT output\\output_%s\n" string.format(\"%X\",data_pc) ".bin"
-next}
+    next
+}
 
 /\.CODE/ {
     print ";\t.CODE - Switch context to Code PC"
     print "\tLUA ALLPASS"
-    print "\t\tdata_pc = sj.current_address"
-    print "\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
-    print "\t\t_pc(\"OUTPUT Output/code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")" 
+    print "\t\tif not in_code then"
+    print "\t\t\tdata_pc = sj.current_address"
+    print "\t\t\tin_code = true"
+    print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
+    print "\t\t\t_pc(\"OUTPUT Output/code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
+    print "\t\tend"
     print "\tENDLUA";
-next}
+    next
+}
 
-#   ;   .DATA - Switch context to Data PC
-#	LUA ALLPASS
-#		code_address = sj.current_address
-#		_pc(".ORG 0x"....string.format(\"%X\",data_address))
-#	ENDLUA
-#
-#   ;   .CODE - Switch context to Code PC
-#	LUA ALLPASS
-#		data_address = sj.current_address
-#		_pc(".ORG 0x"....string.format(\"%X\",code_address))
-#	ENDLUA
+/^\s+\.ORG/ {
+    gsub(/\r/,"",$2);
+    print ";\t.ORG - Reset PC for the correct context"
+    print "\tLUA ALLPASS"
+    print "\t\tif in_code then"
+    print "\t\t\tcode_pc = _c(\""$2"\")"
+    print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
+    print "\t\t\t_pc(\"OUTPUT Output/code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
+    print "\t\telse"
+    print "\t\t\tdata_pc = _c(\""$2"\")"
+    print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))"
+    print "\t\t\t_pc(\"OUTPUT Output/data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")"
+    print "\t\tend"
+    print "\tENDLUA";    
+    next
+}
 
 #================================================================================
 #DEFAULT ACTION 

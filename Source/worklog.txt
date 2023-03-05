@@ -268,14 +268,29 @@ Build a combined .HEX files and run them back together to create the assembled .
  
 Seems to work, but now need to compare binaries and work through symbolic differences between compilers
 
-zasm supports #code and #data segments out of order?
+Built another awk script assemble.sh, which builds the full bin from the peices
+Built a make file
 
-Switch to zasm as target to see if I can avoid the jigsaw puzzle
+RUNS IN DEBUGGER WITH FULL SYMBOLS AND BREAKPOINTS!
 
-Through the first few directives, hitting some of the same issues.
+TODO: Move build around so all volotiles are in a build (now Output) directory
 
-Now at 
-11: #IF         PROCESSOR = "Z80"
-                                 ^ only one character allowed
+- Next Problem - Build is looping because of missing device definitions.
 
-There is no string compare, so "Z80" will have to be redefined as a symbol/label
+No data at device initialization code: 1BA3 (SIO_n1_std+4)
+
+
+.CODE AND .DATA do not strictly alternate, need additional logic to record transition:
+between .CODE->.CODE, .DATA->.DATA, the .CODE->.DATA and .DATA->.CODE work correctly
+
+Need to track which block we are in
+
+Also fix .INCLUDEHEX to add a variable build file that is included in the final srec_cat link
+
+.DATA / .CODE is fixed and optimized to not generate unnecessary segments (.CODE->.CODE and .DATA->.DATA)
+
+Modified code to use .ORG to also generate a new segment 
+
+Now correctly debugs and runs 
+
+Produces an excess of files and a single FE00 code output stray 
