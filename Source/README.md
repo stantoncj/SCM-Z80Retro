@@ -15,6 +15,10 @@ Features
 * Generates debugger code for running in [Dezog]
 * Sample [.vscode] config for Build and Dezog
 
+Instructions
+------------
+This repository must be inserted into the SCM/Source directory for SCMonitor (not at SCM!)
+
 Requirements (for OSX)
 ----------------------
 Requirements to run scw2sjasm: (for OSX)

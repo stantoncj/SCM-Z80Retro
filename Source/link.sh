@@ -16,9 +16,7 @@ fi
 echo "Linking in $builddir"
 
 # Kill the stray code segment in SCM - this is a kludge
-if [ -f "./$builddir/code_*.FE00.bin" ]; then
-  rm ./$builddir/code_*_FE00.bin
-fi
+rm ./$builddir/code*FE00.bin 2> /dev/null
 
 # Build all of the seperate bin files into a single bin with the correct offsets
 # Note there is a byte or two of overlap where the warning has been suppressed

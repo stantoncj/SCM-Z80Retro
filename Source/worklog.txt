@@ -299,3 +299,8 @@ Removed this in the link script
 Cleaned up shell and make scripts
 Moved all build artifacts to ./build including lst,sld,sym
 
+Added README.md, cleaned up code
+
+Implemented INCLUDEHEX 
+
+Now feature complete with SCWorkshop at least what SCMonitor builds

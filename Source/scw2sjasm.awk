@@ -91,7 +91,32 @@
 # Strategy: build a script which finds and converts hex to bin and then use INSERT?
 
 # transform - comment out line
-/^#INSERTHEX/ {gsub(/#/,"; #",$1); print; next} 
+#/^#INSERTHEX/ {gsub(/#/,"; #",$1); print; next}
+/^#INSERTHEX/ {
+    gsub(/\\/,"/",$0)
+    gsub(/\r/,"",$2)
+
+    print "\n; #INSERTHEX from file"
+    print "\tLUA ALLPASS"
+    print "\t\tf = io.open(\""$2"\")"
+    print "\t\tif (f~=nil) then"
+    print "\t\t\tlocal line=f:read()"
+    print "\t\t\twhile line do"
+    print "\t\t\t\tif(string.len(line)>13) then"
+    print "\t\t\t\t\t_pc(string.format(\".DH %s\",string.sub(line,10,-4)))"
+    print "\t\t\t\tend"
+    print "\t\t\t\tline=f:read()"
+    print "\t\t\t\tend"
+    print "\t\telse"
+    print "\t\t\tsj.warning(\"Could not locate file " $2 "\")"
+    print "\t\tend"
+    print "\t\tio.close(f)"
+    print "\tENDLUA\n"
+#    local lines = {}
+#    for line in io.lines(file) do 
+#        lines[#lines + 1] = line
+#    end
+next}
 
 #================================================================================
 #TARGET
