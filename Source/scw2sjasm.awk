@@ -222,7 +222,7 @@ next}
         print
         getline
     }
-    print "\n; Processed by scw2sjasm to modify code from SCWorkshop to sjasmplus"
+    print "\n; Processed by scw2sjasm to modify code from SCWorkshop to sjasmplus on " strftime()
     print ";\n; Initialize .CODE and .DATA PC"
     print "\tLUA ALLPASS"
     print "\t\tcode_pc = 0"
@@ -234,9 +234,9 @@ next}
     print "\tENDLUA";
     print "\n\tDEVICE NOSLOT64K"
     print "\tSLDOPT COMMENT WPMEM, LOGPOINT, ASSERTION"
-    output_file = FILENAME
-    sub(/\.asm/,".bin",output_file)
-    print "\n\tOUTPUT " output_file
+ #   output_file = FILENAME
+ #   sub(/\.asm/,".bin",output_file)
+ #   print "\n\tOUTPUT " build_dir "\" output_file
 }}
 
 /\.DATA/ {

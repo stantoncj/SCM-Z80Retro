@@ -18,9 +18,6 @@ SCMonitor: !Main.asm
 # Assemble!
 	sjasmplus --fullpath --sym=$(scm).sym --lst=$(scm).lst --sld=$(scm).sld "!Main.asm"
 
-# Creates a zero byte !Main.bin file which we can remove
-	rm ./"!Main.bin" 
-
 # SCMonitor allows builds out of order, sjasmplus requires a linear build
 # So scw2sjasm outputs seperate source files which have to be assembled or linked
 	sh ./link.sh $(build_dir)

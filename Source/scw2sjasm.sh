@@ -5,6 +5,9 @@
 #
 # Notes and Detailed transforms can be found in scw2sjam.awk
 
-find . -type f -name '*.asm' -exec gawk -i inplace -v main="./!Main.asm" -f ./scw2sjasm.awk '{}' \;
-
+if grep sjasmplus "!Main.asm"; then
+    echo "scw2sjasm has already been run against !Main.asm"
+else
+    find . -type f -name '*.asm' -exec gawk -i inplace -v main="./!Main.asm" -f ./scw2sjasm.awk '{}' \;
+fi
 #EOF
