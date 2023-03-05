@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# SCWorkshop allows non-linear code output, sjasmplus requires linear
+# The scw2sjasm outputs multiple files which then need to be assembled
+# in the correct .ORG locations
+#
+# The data segments are built, but not used to assemble the final code
+#
+# OBS! There is one stray code segment at FE00 (a jump table) that needs to be excluded
+
 if [ -z $1 ]; then
   builddir="build"
 else

@@ -14,7 +14,7 @@
         },
         "sjasmplus": [
             {
-                "path": "!Main.sld"
+                "path": "build/!Main.sld"
             }
         ],
         "commandsAfterLaunch": [],
