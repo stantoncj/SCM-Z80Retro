@@ -15,9 +15,14 @@ Features
 * Generates debugger code for running in [Dezog]
 * Sample [.vscode] config for Build and Dezog
 
-Instructions
+Instructions (for 1.3)
 ------------
-This repository must be inserted into the SCM/Source directory for SCMonitor (not at SCM!)
+Download Source and Tools from here https://smallcomputercentral.com/small-computer-monitor-v1-3/
+Unzip the directory as SCM
+
+This repository must be inserted into the SCM/Source directory for SCMonitor (not at ./SCM!)
+The SCM/App directory must be available as ../App from the Source directory to include
+Any SCM apps, including BASIC and the CPM Loaders
 
 Requirements (for OSX)
 ----------------------
