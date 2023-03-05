@@ -297,4 +297,5 @@ Produces an excess of files and a single FE00 code output stray
 Removed this in the link script
 
 Cleaned up shell and make scripts
+Moved all build artifacts to ./build including lst,sld,sym
 

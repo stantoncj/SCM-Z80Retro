@@ -7,19 +7,15 @@
 # Built and tested with:
 # GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.0, GNU MP 6.2.1)
 # SjASMPlus Z80 Cross-Assembler v1.20.1 (https://github.com/z00m128/sjasmplus)
+# srec_cat version 1.64.D001 https://srecord.sourceforge.net/
 # SCW036_SCM130_20220325 - From: https://smallcomputercentral.com/small-computer-monitor-v1-3/
 
 # Requirements to run: (for OSX)
 # Install brew (see https://brew.sh/)
-# Install gawk - brew install gawk (you cannot use the distributed OSX awk which is and old distro and missing essential commands)
+# Install gawk - brew install gawk (you cannot use the distributed OSX awk which is an old distro and missing essential commands)
 # Install sjasmplus - https://github.com/z00m128/sjasmplus/blob/master/INSTALL.md (you may have to install other tools to have this make correctly)
+# Install srec_cat - brew install srecord (srec_cat is in the bundle of srecord tools)
 # If commands from Terminal refuse to run, you need to run from Finder once and then allow execution in Control Panel
-
-# Known bugs:
-# 
-# sjasmplus only compares the first 4 bytes of string constants -> no string constants can be non-unique in left most 4 characters
-# this is not a problem in the existing SCM code base
-#
 
 # Discover What directives are actually in use:
 # find . -type f -name '*.asm' -exec awk '/^(#[^\s\\]+)/{print $1;}' '{}' \; | sort | uniq
