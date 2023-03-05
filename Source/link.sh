@@ -6,7 +6,7 @@
 #
 # The data segments are built, but not used to assemble the final code
 #
-# OBS! There is one stray code segment at FE00 (a jump table) that needs to be excluded
+# OBS! There is one stray code segment at FE00 (kJumpTab) that needs to be excluded
 
 if [ -z $1 ]; then
   builddir="build"
