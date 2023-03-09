@@ -304,3 +304,188 @@ Added README.md, cleaned up code
 Implemented INCLUDEHEX 
 
 Now feature complete with SCWorkshop at least what SCMonitor builds
+
+Build compare to test that build is binary equivalent to SCMontor (one can hope)
+
+2nd byte should be cb, it is c3 
+Instruction for bootstrap is JMP 1ccb
+Found 1cc3 is defined twice
+
+Found the bug:
+In original file:
+
+            .ORG szCDate + 9    ;Fixed space allocated for date
+
+Is modified by scm2sjasm to:
+
+  75++1CCE              ;	.ORG - Reset PC for the correct context
+  76++1CCE              	LUA ALLPASS
+  77++1CCE ~            		if in_code then
+  78++1CCE ~            			code_pc = _c("szCName")
+  79++1CCE ~            			_pc(".ORG 0x"..string.format("%04X",code_pc))
+  80++1CCE ~            			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+  81++1CCE ~            		else
+  82++1CCE ~            			data_pc = _c("szCName")
+  83++1CCE ~            			_pc(".ORG 0x"..string.format("%04X",data_pc))
+  84++1CCE ~            			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+  85++1CCE ~            		end
+  86++1CCE              .ORG 0x1CC3
+  86++1CC3              OUTPUT ./build/code_output_1CC3.bin
+  86++1CC3              	ENDLUA
+
+  The interpretation does not capture the math (seperated by spaces)
+
+  Fixed to create correct calculated org
+
+  Now should be 0xcb, now is 0xd8 - difference of +0x0d
+  This may be accumulated
+
+  0007 should be JMP 0584    it is JMP 0585   1 extra byte by 585
+  006E should be JMP 0423    it is JMP 0424   1 extra byte by 424
+  00EB should be CALL 1CCE    it is CALL 1CDB 0xD extra byte by 1CCE
+
+  Pattern begins at 0x420
+  From the source HEX - Spaces for clarity
+  :10 0410 00 08CD23041BAF12189DAF12CD38047B94 76
+  :10 0420 00 E1D1C9F5FE0520093E0DCD1BFE28FB3E 9E
+
+
+  From the built binary
+0000410 08 cd 24 04 1b af 12 18 9d af 12 cd 39 04 7b 97
+        08 CD 23 04 1B AF 12 18 9D AF 12 CD 38 04 7B ** <-- there it is
+0000420 94 e1 d1 c9 f5 fe 05 20 09 3e 0d cd 1b fe 28 fb
+        94 E1 D1 C9 F5 FE 05 20 09 3E 0D CD 1B FE 28 FB 
+        3E   
+
+ 331++041E 7B                       LD   A,E            ;Calculate number of characters
+ 332++041F 97 94                    SUB  A,H            ;  in input buffer
+ 333++0421 E1           .Exit:      POP  HL
+
+Compile SUB A,H = 97 94
+SCW = SUB A,H = 94
+
+Wrote transform for SUB A,H to SUB H
+Corrects a large portion of differences
+
+Next offset is 062f which is B5 B7 instead of B5 
+ 150++062E B7 B5                    OR   A,L            ;Get result byte
+
+Similar issue OR A,L  is OR L
+sjasm compiles as OR A, OR L adding an extra byte
+
+Next offset is 06B7
+000006B7 E6 A7
+
+ 230++06B6 A7 E6 01                 AND  A,kROMBanks    ;Finished all ROM banks?
+
+ Should ne E6 01
+
+Next offset
+ 00000B11 3C 3E
+
+This is LD A version - Fixed
+
+Resolved offsets!
+This;
+0000012B 02 03
+Looks like a honest build difference
+
+This:
+00002052 40 20
+
+0002040 02 6b 20 7b 20 73 20 89 20 5a 38 30 20 53 49 4f
+0002050 20 20 2e 20 38 30 00 db 82 fe 6c c0 db 83 fe 6c
+        20 40 20 38 30 00 DB 82 FE 6C C0 DB 83 FE 6C C0
+0002060 c0 0e 82 cd cd 20 0e 83 c3 cd 20 db 82 cb 47 c8
+
+:10204000 026A207A20722088205A38302053494F 63
+:10205000 204020383000DB82FE6CC0DB83FE6CC0 89
+:10206000 0E82CDCC200E83C3CC20DB82CB47C8DB D5
+
+  48++2049 5A 38 30 20  .String:    .DB  "Z80 SIO "
+  48++204D 53 49 4F 20
+  49++2051 20                       .DB  " "
+  50++2052 2E 20                    .DB  ". "
+
+  @String:    .DB  "Z80 SIO "
+            #DB  SIO_TYPE
+            .DB  "@ "
+            .HEXCHAR kSIOBase \ 16
+            .HEXCHAR kSIOBase & 15
+            .DB  kNull
+
+Bug in transforming @ to . inside quote...secondary
+Extra space introduced by #DB SIO_TYPE is related to introducing " " as minimal string value
+
+    #DEFINE     SIO_TYPE ""         ;or "(std) "
+	DEFINE+     SIO_TYPE " "        ;or "(std) "
+
+Can we make sure a #DB with a " " value does not emit a space?
+Will need to write LUA code as this is evaluated at compile time
+So a 
+Label:  #DB     " "  ; should emit nothing
+should be transformed to 
+Label: ; #DB    " "  ; emits nothing, just a bare label
+
+May need to change the "special blank" value
+
+After a few attempts
+Just punted and gawked the offending line in SIO.asm out
+
+Current diff:
+0000012B 02 03 # This is a version difference after the target .HEX was built
+00001CCB FF 00
+
+00001ED1 40 2E
+00001FCA 40 2E
+00002052 40 2E
+00002105 40 2E
+00002192 40 2E
+000021D9 40 2E
+0000221F 40 2E
+0000228A 40 2E
+000022CF 40 2E
+000022FF 40 2E
+00002322 40 2E
+
+00002375 FF 00 # Below here are just padding bytes
+00002376 FF 00
+00002377 FF 00
+00002378 FF 00
+00002379 FF 00
+0000237A FF 00
+0000237B FF 00
+0000237C FF 00
+0000237D FF 00
+0000237E FF 00
+0000237F FF 00
+00002380 FF 00
+00004DB9 FF 00
+00004DBA FF 00
+00004DBB FF 00
+00004DBC FF 00
+00004DBD FF 00
+00004DBE FF 00
+00004DBF FF 00
+00004DC0 FF 00
+
+00022f0 61 67 6e 6f 73 74 69 63 20 4c 45 44 73 20 2e 20
+        61 67 6E 6F 73 74 69 63 20 4C 45 44 73 20 40 20
+0002300 41 30 00 0e a0 ed 48 db a0 b9 c9 af c9 00 16 23
+0002310 26 23 00 28 23 00 53 74 61 74 75 73 20 4c 45 44
+0002320 20 2e 20 30 38 00 af c9 af c9 cd 72 1d 21 41 00
+
+:1022F000 61676E6F73746963204C454473204020 9E
+:10230000 4130000EA0ED48DBA0B9C9AFC9001623 CB
+:10231000 262300282300537461747573204C4544 B0
+:10232000 204020303800AFC9AFC9CD721D214100 17
+
+  30++22EE 44 69 61 67  .String:    .DB  "Diagnostic LEDs "
+  30++22F2 6E 6F 73 74
+  30++22F6 69 63 20 4C
+  30++22FA 45 44 73 20
+  31++22FE 2E 20                    .DB  ". "
+
+  The 40->2e transform is because of a swap from a quoted @ to a .
+
+  Need to refine the @ transform

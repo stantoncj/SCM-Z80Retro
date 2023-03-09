@@ -34,7 +34,33 @@
 #TARGET
 #UNDEFINE
 
+#================================================================================
+# Test transforms - This is to force some code into shape so we can do binary compares
+#================================================================================ 
+# REMOVE THIS WHEN NOT TESTING
+/#DB.+SIO_TYPE/{print "; **** TESTING ONLY ****"; print ";" $0; print "; **** TESTING ONLY ****"; next}
+
 # Detailed transforms
+
+#================================================================================
+# OP A,H - ***** Different OP code handling in SCM for explicit A *****
+#================================================================================
+
+#SCW example: (line 332 of Console.asm)
+#   SUB  A,H            ;  in input buffer
+# This assembles to 0x94 in SCM
+
+#sjasmplus equivalent:
+# This gets expanded to
+#   SUB A
+#   SUB H
+# and assembles to 0x94 0x97 (two bytes)
+
+# transform - A is implied, move to SUB H.  If A is stated, its just OP A
+/SUB\s+A,/ {gsub(/A,/,"",$0); print; next;}
+/OR\s+A,/ {gsub(/A,/,"",$0); print; next;}
+/AND\s+A,/ {gsub(/A,/,"",$0); print; next;}
+/CP\s+A,/ {gsub(/A,/,"",$0); print; next;}
 
 #================================================================================
 #DEFINE
@@ -46,10 +72,21 @@
 
 #sjasmplus equivalent: (whitespace start, note define+ behaves properly with no replacement value )
 #	DEFINE+ xBUILD_AS_COM_FILE ;Build as CP/M style .COM file (not as ROM)
+#
+# note that ~ is used here to define a null string, SCW allowed DEFINED token "" if expanded would produce no output
 
 # transform - strip #, add tab, changes DEFINE to DEFINE+, quote values so IF compares work correctly, do not double quote or allow null strings
 #             for defines longer than 4 bytes that are non-quoted, limit to 4 bytes.  This is a limit in sjasmplus IF string compare
-/^#DEFINE/ {gsub(/#DEFINE/,"\tDEFINE+",$1); if(length($3) > 0 && index($3,"\"") == 0 && index($3,";") == 0){ if(length($3)>4){$3=substr($3,1,4);} gsub(/\r/,"",$3); $3="\""$3"\"";} gsub(/""/,"\" \"",$3); print; next} 
+/^#DEFINE/ {
+    gsub(/#DEFINE/,"\tDEFINE+",$1); 
+    if(length($3) > 0 && index($3,"\"") == 0 && index($3,";") == 0){ 
+        if(length($3)>4){$3=substr($3,1,4);} 
+        gsub(/\r/,"",$3); 
+        $3="\""$3"\"";
+    } 
+    gsub(/""/,"\" \"",$3); 
+    print; 
+    next} 
 /^#UNDEFINE/ {gsub(/#/,"\t",$1); print; next} 
 
 #================================================================================
@@ -183,9 +220,9 @@ next}
 # szCDate:    #DB  CDATE          ; Build date. eg: "20190627"
 
 # sjasmplus equivalent: #DB is just .DB with interpretation, just use .DB as that is properly interpreted
-
+# if you find a "~" as an expanded value then this is a null/zero length string, comment out the line
 # transform - 
-/#DB/ { gsub(/#/,".",$0); gsub(/\\/,"/",$0); print; next} 
+/#DB/ { gsub(/#/,".",$0); gsub(/\\/,"/",$0); print; next}
 
 
 #================================================================================
@@ -226,6 +263,8 @@ next}
 # sjasmplus equivalent: uses .Label as local after non-local label
 #.Loop:
 /@/ {gsub(/@/,".",$0); print; next}
+# BUG: This is causing a bug inside a quoted string causing binary diff
+# Need to refine to use only when at the beginning of a lable
 
 #================================================================================
 #.DATA / .CODE / .ORG
@@ -291,15 +330,18 @@ next}
 }
 
 /^\s+\.ORG/ {
-    gsub(/\r/,"",$2);
+    gsub(/\.ORG\s+/,"",$0)  # remove beginning of line
+    gsub(/\s+;.+/,"",$0)    # remove any comments after end of line
+    gsub(/ /,"",$0)         # remove any spaces
+    gsub(/\r/,"",$0)        # remove the cr
     print ";\t.ORG - Reset PC for the correct context"
     print "\tLUA ALLPASS"
     print "\t\tif in_code then"
-    print "\t\t\tcode_pc = _c(\""$2"\")"
+    print "\t\t\tcode_pc = _c(\""$0"\")"
     print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",code_pc))"
     print "\t\t\t_pc(\"OUTPUT \"..build_dir..\"code_output_\"..string.format(\"%04X\",code_pc)..\".bin\")"
     print "\t\telse"
-    print "\t\t\tdata_pc = _c(\""$2"\")"
+    print "\t\t\tdata_pc = _c(\""$0"\")"
     print "\t\t\t_pc(\".ORG 0x\"..string.format(\"%04X\",data_pc))"
     print "\t\t\t_pc(\"OUTPUT \"..build_dir..\"data_output_\"..string.format(\"%04X\",data_pc)..\".bin\")"
     print "\t\tend"
