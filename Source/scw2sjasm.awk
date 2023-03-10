@@ -35,9 +35,15 @@
 #UNDEFINE
 
 #================================================================================
-# Test transforms - This is to force some code into shape so we can do binary compares
+# Test transforms - This is to force some code so we can do binary compares
 #================================================================================ 
-# REMOVE THIS WHEN NOT TESTING
+#
+# !!!! REMOVE THIS WHEN NOT TESTING !!!!
+#
+# This comments out this line:
+#            #DB  SIO_TYPE
+#because SIO_TYPE is a null string in the base code 
+#
 /#DB.+SIO_TYPE/{print "; **** TESTING ONLY ****"; print ";" $0; print "; **** TESTING ONLY ****"; next}
 
 # Detailed transforms
@@ -262,9 +268,11 @@ next}
 
 # sjasmplus equivalent: uses .Label as local after non-local label
 #.Loop:
-/@/ {gsub(/@/,".",$0); print; next}
+/[^'"]@|^@/ {gsub(/@/,".",$0); print; next}
+
+
 # BUG: This is causing a bug inside a quoted string causing binary diff
-# Need to refine to use only when at the beginning of a lable
+# Need to refine to use only when outside of quotes - regex work
 
 #================================================================================
 #.DATA / .CODE / .ORG

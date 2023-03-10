@@ -489,3 +489,23 @@ Current diff:
   The 40->2e transform is because of a swap from a quoted @ to a .
 
   Need to refine the @ transform
+
+Down to 24 bytes difference
+
+0001ec0 c1 cd c9 1e cd 50 1d 18 c8 c5 d5 e5 06 11 1a fe
+0001ed0 2e 28 07 cd 5e 1d 13 10 f5 04 3e 20 cd 5e 1d 10
+0001ee0 f9 1a cd 5e 1d 13 1a b7 20 f8 e1 d1 c1 c9 53 75
+
+:101EC000 C1CDC91ECD501D18C8C5D5E506111AFE D5
+:101ED000 402807CD5E1D1310F5043E20CD5E1D10 79
+:101EE000 F91ACD5E1D131AB720F8E1D1C1C95375 97
+
+This was a single quoted @, fixed in awk
+
+Down to 23 bytes difference
+
+00001FCA 40 2E
+
+0001fb0 1f 08 36 20 01 04 20 ea 1f 42 69 74 2d 62 61 6e
+0001fc0 67 20 73 65 72 69 61 6c 20 2e 20 32 38 00 3e 01
+0001fd0 d3 28 3a c1 fe b7 20 10 11 c8 00 cd ec 1c 3e 01
