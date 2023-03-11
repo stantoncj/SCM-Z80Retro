@@ -502,10 +502,7 @@ Down to 24 bytes difference
 
 This was a single quoted @, fixed in awk
 
-Down to 23 bytes difference
-
-00001FCA 40 2E
-
-0001fb0 1f 08 36 20 01 04 20 ea 1f 42 69 74 2d 62 61 6e
-0001fc0 67 20 73 65 72 69 61 6c 20 2e 20 32 38 00 3e 01
-0001fd0 d3 28 3a c1 fe b7 20 10 11 c8 00 cd ec 1c 3e 01
+Down to 23 bytes difference, 21 are padding
+2 are actual issues
+0000012B 02 03 - This is a known minor version increment between the supplied build and the source
+00001FCA 40 2E - This is another @ -> . inside a string - BIOS/Framework/Devices/BitBangSerial_SC1.asm Line 45

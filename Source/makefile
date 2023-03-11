@@ -6,8 +6,9 @@
 # Created to allow build of SCWorkshop files on OSX in Microsoft Code
 # Christian Stanton 2023
 
+main_file=!Main
 build_dir=build
-scm="./$(build_dir)/!Main"
+scm="./$(build_dir)/$(main_file)"
 
 SCMonitor: !Main.asm
 
@@ -16,7 +17,7 @@ SCMonitor: !Main.asm
 	mkdir ./$(build_dir)
 
 # Assemble!
-	sjasmplus --fullpath --sym=$(scm).sym --lst=$(scm).lst --sld=$(scm).sld "!Main.asm"
+	sjasmplus --fullpath --sym=$(scm).sym --lst=$(scm).lst --sld=$(scm).sld "$(main_file).asm"
 
 # SCMonitor allows builds out of order, sjasmplus requires a linear build
 # So scw2sjasm outputs seperate source files which have to be assembled or linked

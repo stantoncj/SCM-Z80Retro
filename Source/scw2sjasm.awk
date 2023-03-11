@@ -9,6 +9,8 @@
 # SjASMPlus Z80 Cross-Assembler v1.20.1 (https://github.com/z00m128/sjasmplus)
 # srec_cat version 1.64.D001 https://srecord.sourceforge.net/
 # SCW036_SCM130_20220325 - From: https://smallcomputercentral.com/small-computer-monitor-v1-3/
+# 
+# Validated as binary equivalent in SCM/Builds/SCM-F1-2022-02-27-Monitor-v130-BIOS-v130-SC516.hex
 
 # Requirements to run: (for OSX)
 # Install brew (see https://brew.sh/)
@@ -35,7 +37,7 @@
 #UNDEFINE
 
 #================================================================================
-# Test transforms - This is to force some code so we can do binary compares
+# Test transforms - This is to force some code so we can do binary compares against distribution hex builds
 #================================================================================ 
 #
 # !!!! REMOVE THIS WHEN NOT TESTING !!!!
@@ -46,7 +48,9 @@
 #
 /#DB.+SIO_TYPE/{print "; **** TESTING ONLY ****"; print ";" $0; print "; **** TESTING ONLY ****"; next}
 
-# Detailed transforms
+# kSysMinor was incremented after SCM-F1-2022-02-27-Monitor-v130-SC516.hex as built
+#kSysMinor  = 3              ;System version revision
+/^kSysMinor/ {gsub(/3/,"2",$0); print; next}
 
 #================================================================================
 # OP A,H - ***** Different OP code handling in SCM for explicit A *****
@@ -268,7 +272,29 @@ next}
 
 # sjasmplus equivalent: uses .Label as local after non-local label
 #.Loop:
-/[^'"]@|^@/ {gsub(/@/,".",$0); print; next}
+#/[^'"]@|^@/ {gsub(/@/,".",$0); print; next}
+/@/ { qi=match($0,/['"]/);
+    if(qi == 0){ # if there are no quotes in this line
+        gsub(/@/,".",$0); 
+        print; 
+        next;
+    } else {
+        qc = substr($0,qi,1); # extract the quote type found
+        qj = match(substr($0,qi+1,99),qc) 
+        if(qj > 0){ # found a second quote of the same type
+            qa = substr($0,1,qi)
+            gsub(/@/,".",qa)
+            qb = substr($0,qi+1,qj-1)
+            qc = substr($0,qj+qi,length($0))
+            gsub(/@/,".",qc)
+            print qa qb qc
+        } else { # no second quote found, just punt
+            gsub(/@/,".",$0);
+            print
+        }
+        next;
+    }
+}
 
 
 # BUG: This is causing a bug inside a quoted string causing binary diff
