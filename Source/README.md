@@ -15,13 +15,13 @@ Questions, Critiques or Accolades directed at me at stantoncj@gmail.com
 
 Features
 --------
-* Modifies all needed directives to allow build of [SCMonitor] to burnable copy
+* Modifies all needed directives to allow build of __SCMonitor__ to burnable copy
 * Builds to a binary equivalent file
 * Requires no manual modification to SCMonitor code
 * Runs on OSX (and probably other Linux, but untested)
-* Includes [make] file for SCMonitor
-* Generates debugger code for running in [Dezog]
-* Sample [.vscode] config for Build and Dezog
+* Includes __make__ file for SCMonitor
+* Generates debugger code for running in __DeZog__
+* Sample __.vscode__ config for Build and __DeZog__
 
 Instructions (for 1.3)
 ------------
