@@ -64,7 +64,7 @@ __make__
 
 
 scw2sjasm Development tools: (not used in normal situations):\
-__./compare.sh__ - Compares a distributed build hex file with the sjasmplus built binary\
+__./compare.sh__ - Compares a distributed build hex file with the sjasmplus built binary
 __./restore.sh__ - Resets the entire Source directory to the distribution version
 
 To debug in an IDE, you need to install
