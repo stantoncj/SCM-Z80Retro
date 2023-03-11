@@ -5,10 +5,10 @@ Modifies Z80 assembler from Small Computer Workshop (SCWorkshop) by Steve Cousin
 
 Kudos to Steve for his work on SCWorkshop and SCMonitor!  An essential contribution to the Z80 retrocompute community.
 
-This is my contribution to allow SCM builds on OSX (or other Linux)
+This is my contribution to allow SCM builds on OSX (or other Linux)  
 As tempting as it was to just fire up SCW on Windows, I never actually did during this project - This is 100% reverse engineered
 
-Released with under an Open Source [MIT License](https://github.com/stantoncj/scw2sjasm/blob/main/LICENSE.md)
+Released under an Open Source [MIT License](https://github.com/stantoncj/scw2sjasm/blob/main/LICENSE.md)  
 Please credit me (and Steve Cousins) in any derivatives
 
 Questions, Critiques or Accolades directed at me at stantoncj@gmail.com
