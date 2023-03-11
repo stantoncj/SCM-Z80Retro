@@ -17,7 +17,6 @@ Instructions (for 1.3)
 ------------
 Download Source and Tools from here https://smallcomputercentral.com/small-computer-monitor-v1-3/
 Unzip the directory as SCM
-cd ./SCM/Source
 
 This repository must be inserted into the ./SCM/Source directory for SCMonitor (not at ./SCM!)
 The SCM/App directory must be available as ../App from the Source directory to include any SCM apps, including BASIC and the CPM Loaders
