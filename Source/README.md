@@ -11,7 +11,7 @@ As tempting as it was to just fire up SCW on Windows, I never actually did durin
 Released with under an Open Source [MIT License](https://github.com/stantoncj/scw2sjasm/blob/main/LICENSE.md)
 Please credit me (and Steve Cousins) in any derivatives
 
-Questions, Critiques or Accolades directed at me at [stantoncj@gmail.com](mailto: stantoncj@gmail.com)
+Questions, Critiques or Accolades directed at me at stantoncj@gmail.com
 
 Features
 --------
@@ -51,8 +51,8 @@ Requirements to run scw2sjasm: (for OSX)
 * Install [sjasmplus](https://github.com/z00m128/sjasmplus/blob/master/INSTALL.md) (you may have to install other tools to have this make correctly)
 * Install __srec_cat__ - _brew install srecord_ (srec_cat is in the bundle of srecord tools)
 * Install __git__ - _brew install git_ (or use your choice of GUI git tools such as the excellent [GitKraken](https://www.gitkraken.com/))
-* If commands from Terminal refuse to run, you need to run from Finder once and then allow execution in Control Panel
-* You can hand run the build at this point and it should work
+* You should check all of these run on the command line (tested versions listed in scw2sjasm.awk)
+* If commands from Terminal refuse to run, you need to run from Finder once or allow execution in Control Panel
 
 The process
 -----------
