@@ -56,10 +56,10 @@ Requirements to run scw2sjasm: (for OSX)
 
 The process
 -----------
-To modify SCM code to compile under sjasmplus: (this runs only once)
+To modify SCM code to compile under sjasmplus: (this runs only once)  
 __./scw2sjasm.sh__
 
-To build the binary: (you can choose hex or bin in the makefile)
+To build the binary: (you can choose hex or bin in the makefile)  
 __make__
 
 
@@ -70,9 +70,9 @@ __./restore.sh__ - Resets the entire Source directory to the distribution versio
 To debug in an IDE, you need to install
 * [VSCode](https://code.visualstudio.com/docs/setup/mac) - Visual Studio Code
 * [DeZog](https://github.com/maziac/DeZog/) - You can just install this from Visual Studio, look for DeZog
-* Configs in __.vscode__ - See included examples
-    -.vscode/tasks.json should do a build with make without mods (shift-command-B)
-    -.vscode/launch.json should work to launch a DeZog debugger (shift-command-D)
+* Configs in __.vscode__ - See included examples  
+    -.vscode/tasks.json should do a build with make without mods (shift-command-B)  
+    -.vscode/launch.json should work to launch a DeZog debugger (shift-command-D)  
 * There are also some nice Z80 syntax highlighters (I use ASM Code Lens) you can find by poking around in the VSCode extensions
 
 
