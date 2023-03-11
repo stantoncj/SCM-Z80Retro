@@ -9,6 +9,7 @@
 main_file=!Main
 build_dir=build
 scm="./$(build_dir)/$(main_file)"
+target=hex
 
 SCMonitor: !Main.asm
 
@@ -19,9 +20,12 @@ SCMonitor: !Main.asm
 # Assemble!
 	sjasmplus --fullpath --sym=$(scm).sym --lst=$(scm).lst --sld=$(scm).sld "$(main_file).asm"
 
+# Remove stray code segment
+	rm -rf ./$(build_dir)/code_output_FE00.bin
+
 # SCMonitor allows builds out of order, sjasmplus requires a linear build
 # So scw2sjasm outputs seperate source files which have to be assembled or linked
-	sh ./link.sh $(build_dir)
+	sh ./link.sh $(build_dir) $(target)
 
 # EOF
 

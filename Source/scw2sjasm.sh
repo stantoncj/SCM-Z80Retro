@@ -5,6 +5,8 @@
 #
 # Notes and Detailed transforms can be found in scw2sjam.awk
 
+
+
 if grep sjasmplus "!Main.asm"; then
     echo "scw2sjasm has already been run against !Main.asm"
 else

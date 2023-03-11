@@ -256,23 +256,18 @@ next}
     print "\tENDLUA";  
 next}
 
-#    LUA ALLPASS
-#        digit = _c("kACIABase / 16")
-#        if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
-#    ENDLUA
-
 #================================================================================
-#@Label - Local Labels
+#@Label - Local Labels 
 #================================================================================
 
 # SCW example:
 #@Loop:
 # 
-# Suspect this is local to the prior non-local label 
 
 # sjasmplus equivalent: uses .Label as local after non-local label
 #.Loop:
-#/[^'"]@|^@/ {gsub(/@/,".",$0); print; next}
+
+# transform
 /@/ { qi=match($0,/['"]/);
     if(qi == 0){ # if there are no quotes in this line
         gsub(/@/,".",$0); 
@@ -295,10 +290,6 @@ next}
         next;
     }
 }
-
-
-# BUG: This is causing a bug inside a quoted string causing binary diff
-# Need to refine to use only when outside of quotes - regex work
 
 #================================================================================
 #.DATA / .CODE / .ORG
