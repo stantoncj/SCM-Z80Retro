@@ -59,8 +59,9 @@ The process
 To modify SCM code to compile under sjasmplus: (this runs only once)
 __./scw2sjasm.sh__
 
-To build the binary:\
+To build the binary: (you can choose hex or bin in the makefile)
 __make__
+
 
 scw2sjasm Development tools: (not used in normal situations):\
 __./compare.sh__ - Compares a distributed build hex file with the sjasmplus built binary\
@@ -70,7 +71,9 @@ To debug in an IDE, you need to install
 * [VSCode](https://code.visualstudio.com/docs/setup/mac) - Visual Studio Code
 * [DeZog](https://github.com/maziac/DeZog/) - You can just install this from Visual Studio, look for DeZog
 * Configs in __.vscode__ - See included examples
-* There are also some nice Z80 syntax highlighters you can find by poking around in the extensions
+**.vscode/tasks.json to do a build with make without mods
+**.vscode/launch.json should work to launch a DeZog debugger 
+* There are also some nice Z80 syntax highlighters (I use ASM Code Lens) you can find by poking around in the VSCode extensions
 
 
 
