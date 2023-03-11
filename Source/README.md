@@ -71,8 +71,8 @@ To debug in an IDE, you need to install
 * [VSCode](https://code.visualstudio.com/docs/setup/mac) - Visual Studio Code
 * [DeZog](https://github.com/maziac/DeZog/) - You can just install this from Visual Studio, look for DeZog
 * Configs in __.vscode__ - See included examples
-**.vscode/tasks.json to do a build with make without mods
-**.vscode/launch.json should work to launch a DeZog debugger 
+    .vscode/tasks.json should do a build with make without mods (shift-command-B)
+    .vscode/launch.json should work to launch a DeZog debugger (shift-command-D)
 * There are also some nice Z80 syntax highlighters (I use ASM Code Lens) you can find by poking around in the VSCode extensions
 
 
