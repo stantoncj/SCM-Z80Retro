@@ -12,36 +12,54 @@
 ; SIO too complex to reproduce technical info here. See SIO datasheet
 
 ; Externally definitions required:
-;kSIOBase:   .EQU 0x80           ;Base address of serial Z80 SIO
-;kSIOACont:  .EQU kSIOBase+2     ;I/O address of control register A
-;kSIOAData:  .EQU kSIOBase+0     ;I/O address of data register A
-;kSIOBCont:  .EQU kSIOBase+3     ;I/O address of control register B
-;kSIOBData:  .EQU kSIOBase+1     ;I/O address of data register B
-;kSIOFlags:  .EQU 0b00000010     ;Hardware flags = SIO #1
+;kSIOBase   = 0x80           ;Base address of serial Z80 SIO
+;kSIOACont  = kSIOBase+2     ;I/O address of control register A
+;kSIOAData  = kSIOBase+0     ;I/O address of data register A
+;kSIOBCont  = kSIOBase+3     ;I/O address of control register B
+;kSIOBData  = kSIOBase+1     ;I/O address of data register B
+;kSIOFlags  = 0b00000010     ;Hardware flags = SIO #1
 ;#DEFINE    SIO_TYPE "(rc) "     ;SIO addressing order etc.
 
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
 ; SCM BIOS framework interface descriptor
 
             .DB  0              ;Device ID code (not currently used)
-            .DW  @String        ;Pointer to device string
-            .DW  @SIO_Init      ;Pointer to initialisation code
+            .DW  .String        ;Pointer to device string
+            .DW  .SIO_Init      ;Pointer to initialisation code
             .DB  kSIOFlags      ;Hardware flags bit mask
-            .DW  @SIO_Set       ;Point to device settings code
+            .DW  .SIO_Set       ;Point to device settings code
             .DB  2              ;Number of console devices
-            .DW  @SIO_RxA       ;Pointer to 1st channel input code
-            .DW  @SIO_TxA       ;Pointer to 1st channel output code
-            .DW  @SIO_RxB       ;Pointer to 2nd channel input code
-            .DW  @SIO_TxB       ;Pointer to 2nd channel output code
-@String:    .DB  "Z80 SIO "
-            #DB  SIO_TYPE
+            .DW  .SIO_RxA       ;Pointer to 1st channel input code
+            .DW  .SIO_TxA       ;Pointer to 1st channel output code
+            .DW  .SIO_RxB       ;Pointer to 2nd channel input code
+            .DW  .SIO_TxB       ;Pointer to 2nd channel output code
+.String:    .DB  "Z80 SIO "
+; **** TESTING ONLY ****
+;            #DB  SIO_TYPE
+; **** TESTING ONLY ****
             .DB  "@ "
-            .HEXCHAR kSIOBase \ 16
-            .HEXCHAR kSIOBase & 15
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kSIOBase / 16")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kSIOBase & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
             .DB  kNull
 
 
@@ -52,7 +70,7 @@
 ;             AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; If the device is found it is initialised
-@SIO_Init:
+.SIO_Init:
 ; First look to see if the device is present
             IN   A,(kSIOACont)  ;Read status (control) register A
             ;AND  0b00101100    ;Mask for known bits in control reg
@@ -77,13 +95,13 @@
 ;   On exit:  A = Character input from the device
 ;             NZ flagged if character input
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@SIO_RxA:
+.SIO_RxA:
             IN   A,(kSIOACont)  ;Address of status register
             BIT  0,A            ;Receive byte available
             RET  Z              ;Return Z if no character
             IN   A,(kSIOAData)  ;Read data byte
             RET
-@SIO_RxB:
+.SIO_RxB:
             IN   A,(kSIOBCont)  ;Address of status register
             BIT  0,A            ;Receive byte available
             RET  Z              ;Return Z if no character
@@ -99,7 +117,7 @@
 ;             If character output failed (eg. device busy)
 ;               Z flagged and A = Character to output
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@SIO_TxA:
+.SIO_TxA:
             PUSH BC
             LD   C,kSIOACont    ;SIO control register
             IN   B,(C)          ;Read SIO control register
@@ -109,7 +127,7 @@
             OUT  (kSIOAData),A  ;Write data byte
             OR   0xFF           ;Return success A=0xFF and NZ flagged
             RET
-@SIO_TxB:
+.SIO_TxB:
             PUSH BC
             LD   C,kSIOBCont    ;SIO control register
             IN   B,(C)          ;Read SIO control register
@@ -134,29 +152,29 @@
 ; this consolde device.
 ; WARNING: We assume serial port A is an odd numbered console device
 ;          and serial port B is an even numbered console device
-@SIO_Set:   CP   1              ;Baud rate request?
-            JR   NZ,@SetFail    ;No, so failed setting
+.SIO_Set:   CP   1              ;Baud rate request?
+            JR   NZ,.SetFail    ;No, so failed setting
 ; Determine which serial port is being set
 ; B = Baud rate code (1 to 12)
 ; C = Console device number (1 to 6)
 ; Look to see if there is a CTC
             LD   A,(iHwFlags)   ;Get current hardware flags
             AND  0b01010000     ;Mask for CTC #1 or #2 hardware
-            JR   Z,@SetFail     ;No CTC so failed to set baud rate
+            JR   Z,.SetFail     ;No CTC so failed to set baud rate
 ; Determine which serial port is being set
 ; B = Baud rate code (1 to 12)
 ; C = Console device number (1 to 6)
             LD   A,C            ;Get console device number (1 to 6)
             AND  1              ;SIO port A ?            *** WARNING ***
             LD   A,kSIOACTC     ;CTC register address for port A
-            JR   NZ,@SIO_Setup  ;Yes, port A, so skip
+            JR   NZ,.SIO_Setup  ;Yes, port A, so skip
             LD   A,kSIOBCTC     ;CTC register address for port B
 ; Check if this SIO port has a linked CTC channel
 ; A = CTC channel register address (zero if no linked CTC channel)
 ; B = Baud rate code (1 to 12)
 ; C = Console device number (1 to 6)
-@SIO_Setup: OR   A              ;Is the CTC register > 0 ?
-            JR   Z,@SetFail     ;No, so failed to set baud rate
+.SIO_Setup: OR   A              ;Is the CTC register > 0 ?
+            JR   Z,.SetFail     ;No, so failed to set baud rate
             PUSH BC
             LD   C,A            ;CTC register address 
             CALL CTC_Baud       ;Set CTC interface baud rate
@@ -166,26 +184,26 @@
             LD   A,C            ;Get console device number (1 to 6)
             LD   C,kSIOACont    ;SIO port A control reg  *** WARNING ***
             AND  1              ;SIO port A ?            *** WARNING ***
-            JR   NZ,@GotIt      ;Yes, so we have the correct control reg
+            JR   NZ,.GotIt      ;Yes, so we have the correct control reg
             LD   C,kSIOBCont    ;SIO port B control reg  *** WARNING ***
 ; B = Requested SIO divider (16 or 32) - as returned from CTC setting
 ; C = SIO control register address
-@GotIt:     LD   A,D            ;Get requested SIO divider (16 or 64)
+.GotIt:     LD   A,D            ;Get requested SIO divider (16 or 64)
             CP   16             ;Divide by 16 requested?
             PUSH AF             ;Preserved Z flag
             CALL Z,SIO_Set16    ;Yes, so set SIO to divide by 16
             POP  AF             ;Restore Z flag
             CALL NZ,SIO_Set64   ;No, so set SIO to divide by 64
-            OR   A,0xFF         ;Return success (NZ flagged)
+            OR   0xFF         ;Return success (NZ flagged)
             RET
-@SetFail:   XOR  A              ;Return failed (Z flagged)
+.SetFail:   XOR  A              ;Return failed (Z flagged)
             RET
 
 
 ; **********************************************************************
 ; Only include the SIO initialisation code once
-#IFNDEF     SIO_INIT
-#DEFINE     SIO_INIT
+	IFNDEF SIO_INIT
+	DEFINE+ SIO_INIT 
 ; Write initialisation data to SIO
 ;   On entry: C = CTC control port I/O address
 ;   On exit:  DE IX IY I AF' BC' DE' HL' preserved
@@ -222,7 +240,7 @@ SIOData16:  .DB  0b00011000     ; Wr0 Channel reset
             .DB  0b11101010     ; Wr5 Transmit enable, 8 bit, flow ctrl
             .DB  0b00010001     ; Wr0 Pointer R1 + reset ex st int
             .DB  0b00000000     ; Wr1 No Tx interrupts
-#ENDIF
+	ENDIF
 
 
 ; **********************************************************************

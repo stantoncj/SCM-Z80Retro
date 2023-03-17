@@ -28,11 +28,38 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-            .ORG  kBiosData     ;Establish workspace/data area
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("kBiosData")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("kBiosData")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
@@ -68,34 +95,34 @@ H_GetVers:  LD  H,kBiosID       ;H = BIOS / hardware ID
 ; Tcycle calculations assume no wait states added
 ; Actual measurements on SC126 showed timer running 2.5% slow so 
 ; kDelayLP set to 21 instead of 20. Yet to work out why!
-#IF         PROCESSOR = "Z80"
-kDelayOH:   .EQU 36             ;Overhead for each 1ms in Tcycles
-kDelayLP:   .EQU 26             ;Inner loop time in Tcycles
-#ENDIF
-#IF         PROCESSOR = "Z180"
-kDelayOH:   .EQU 29             ;Overhead for each 1ms in Tcycles
-kDelayLP:   .EQU 21             ;Inner loop time in Tcycles (20 in theory!)
-#ENDIF
-kDelayTA:   .EQU kCPUClock / 1000 ;CPU clock cycles per millisecond
-kDelayTB:   .EQU kDelayTA - kDelayOH  ;Cycles required for inner loop
-kDelayCnt:  .EQU kDelayTB / kDelayLP  ;Loop counter for inner loop
+	IF PROCESSOR = "Z80""
+kDelayOH   = 36             ;Overhead for each 1ms in Tcycles
+kDelayLP   = 26             ;Inner loop time in Tcycles
+	ENDIF
+	IF PROCESSOR = "Z180"
+kDelayOH   = 29             ;Overhead for each 1ms in Tcycles
+kDelayLP   = 21             ;Inner loop time in Tcycles (20 in theory!)
+	ENDIF
+kDelayTA   = kCPUClock / 1000 ;CPU clock cycles per millisecond
+kDelayTB   = kDelayTA - kDelayOH  ;Cycles required for inner loop
+kDelayCnt  = kDelayTB / kDelayLP  ;Loop counter for inner loop
 ; 
 ;                               Z80      Z180     Tcycles
 H_Delay:    PUSH AF
             PUSH BC
             PUSH DE
 ; 1 ms loop, DE times...        ;[=36]   [=29]    Overhead for each 1ms
-@LoopDE:    LD   BC,kDelayCnt   ;[10]    [9]
+.LoopDE:    LD   BC,kDelayCnt   ;[10]    [9]
 ; Inner loop, BC times...       ;[=26]   [=20]    Loop time in Tcycles
-@LoopBC:    DEC  BC             ;[6]     [4]
+.LoopBC:    DEC  BC             ;[6]     [4]
             LD   A,C            ;[4]     [4]
             OR   B              ;[4]     [4]
-            JP   NZ,@LoopBC     ;[12/7]  [8/6] 
+            JP   NZ,.LoopBC     ;[12/7]  [8/6] 
 ; Have we looped once for each millisecond requested?
             DEC  DE             ;[6]     [4]
             LD   A,E            ;[4]     [4]
             OR   D              ;[4]     [4]
-            JR   NZ,@LoopDE     ;[12/7]  [8/6]
+            JR   NZ,.LoopDE     ;[12/7]  [8/6]
             POP  DE
             POP  BC
             POP  AF
@@ -122,8 +149,8 @@ InitJumps:  PUSH AF
             LD   C,A            ;Table entry number
             LD   A,B            ;Get number of table entries
             OR   A              ;Zero ?
-            JR   Z,@Exit        ;Yes, so abort
-@Next:      LD   E,(HL)         ;Get lo byte of vector
+            JR   Z,.Exit        ;Yes, so abort
+.Next:      LD   E,(HL)         ;Get lo byte of vector
             INC  HL             ;Point to hi byte of vector
             LD   D,(HL)         ;Get lo byte of vector
             INC  HL             ;Point to next vector
@@ -136,8 +163,8 @@ InitJumps:  PUSH AF
             POP  HL
             POP  BC
             INC  C              ;Increment entry number
-            DJNZ @Next          ;Repeat until done
-@Exit:      POP  HL
+            DJNZ .Next          ;Repeat until done
+.Exit:      POP  HL
             POP  DE
             POP  BC
             POP  AF
@@ -220,7 +247,7 @@ OutputChr:  PUSH AF
 ; **********************************************************************
 
 ; BIOS name string (used in Monitor's help text. eg: xyz BIOS 1.2.3)
-szBName:    #DB  BNAME
+szBName:    .DB  BNAME
             .DB  kNull
 
 
@@ -228,7 +255,15 @@ szBName:    #DB  BNAME
 ; **  Workspace (in RAM)                                              **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 ; Hardware flags (for Z80/Z180 from SCM v1.1)
 ;   Bit 0 = ACIA #1 
@@ -241,7 +276,15 @@ szBName:    #DB  BNAME
 ;   Bit 7 = Z180 serial
 iHwFlags:   .DB  0x00           ;Hardware flags
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 

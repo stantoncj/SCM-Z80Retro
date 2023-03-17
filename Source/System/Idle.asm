@@ -36,7 +36,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Idle: Configure idle events
 ;   On entry: A = Configuration:
@@ -59,42 +67,42 @@ IdleConfig: PUSH AF
 ; Registers must be preserved by this function
 IdlePoll:   PUSH AF
             CALL JpIdle         ;Poll timer
-            JR   NZ,@Event1ms   ;Skip if 1ms event to process
+            JR   NZ,.Event1ms   ;Skip if 1ms event to process
             POP  AF             ;  otherwise exit now
             RET
 ; 1 ms tick (we arrive here approximately 1000 times each second)
-@Event1ms:  PUSH BC             ;Preserve BC
+.Event1ms:  PUSH BC             ;Preserve BC
             PUSH DE             ;Preserve DE
             PUSH HL             ;Preserve HL
             LD   HL,iIdleT1     ;Point to timer 1
             DEC  (HL)           ;Decrement timer 1
-            JR   NZ,@IdleT1end  ;Skip if not zero
+            JR   NZ,.IdleT1end  ;Skip if not zero
             LD   A,(iIdleP1)    ;Get period for timer 1
             LD   (HL),A         ;Reset timer 1
             CALL JpTimer1       ;Call n x 1 ms timer event handler
-@IdleT1end: LD   HL,iIdleMS     ;Point to millisecond counter
+.IdleT1end: LD   HL,iIdleMS     ;Point to millisecond counter
             DEC  (HL)           ;Decrement millisecond counter
-            JR   NZ,@IdleExit   ;Not zero so exit
+            JR   NZ,.IdleExit   ;Not zero so exit
 ; 10 ms tick (we arrive here approximately 100 times each second)
             LD   (HL),10        ;Reset millisecond counter to 10
             LD   HL,iIdleT2     ;Point to timer 2
             DEC  (HL)           ;Decrement timer 2
-            JR   NZ,@IdleT2end  ;Skip if not zero
+            JR   NZ,.IdleT2end  ;Skip if not zero
             LD   A,(iIdleP2)    ;Get period for timer 2
             LD   (HL),A         ;Reset timer 2
             CALL JpTimer2       ;Call n x 10 ms timer event handler
-@IdleT2end: LD   HL,iIdleCS     ;Point to centisecond counter
+.IdleT2end: LD   HL,iIdleCS     ;Point to centisecond counter
             DEC  (HL)           ;Decrement centisecond counter
-            JR   NZ,@IdleExit   ;Not zero so exit
+            JR   NZ,.IdleExit   ;Not zero so exit
 ; 100 ms tick (we arrive here approximately 10 times each second)
             LD   (HL),10        ;Reset centisecond counter to 10
             LD   HL,iIdleT3     ;Point to timer 3
             DEC  (HL)           ;Decrement timer 3
-            JR   NZ,@IdleExit   ;Skip if not zero
+            JR   NZ,.IdleExit   ;Skip if not zero
             LD   A,(iIdleP3)    ;Get period for timer 3
             LD   (HL),A         ;Reset timer 3
             CALL JpTimer3       ;Call n x 100 ms timer event handler
-@IdleExit:  POP  HL             ;Restore HL
+.IdleExit:  POP  HL             ;Restore HL
             POP  DE             ;Restore DE
             POP  BC             ;Restore BC
             POP  AF
@@ -132,7 +140,15 @@ IdleSetUp:  LD   B,0
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 ; Cycle counting variables
 iIdleMS:    .DB  0              ;Millisecond counter

@@ -10,12 +10,12 @@
 ; present) otherwise it is 7.3728 MHz.
 
 ; Z80 SIO #1 with RC2014 register order
-#IFNDEF     INCLUDE_SIO_n1_rc
-kSIO1:      .SET 0x80           ;Base address of serial Z80 SIO #1
-kSIO1ACTC:  .SET 0              ;Port A's CTC register (0 if n/a)
-kSIO1BCTC:  .SET kCTC1+1        ;Port B's CTC register (0 if n/a)
-#DEFINE     INCLUDE_SIO_n1_rc   ;Include SIO #1 with RC2014 register order
-#ENDIF
+	IFNDEF INCLUDE_SIO_n1_rc
+kSIO1      = 0x80           ;Base address of serial Z80 SIO #1
+kSIO1ACTC  = 0              ;Port A's CTC register (0 if n/a)
+kSIO1BCTC  = kCTC1+1        ;Port B's CTC register (0 if n/a)
+	DEFINE+ INCLUDE_SIO_n1_rc ;Include SIO #1 with RC2014 register order
+	ENDIF
 
 
 

@@ -41,11 +41,11 @@
 ; **  Constants                                                       **
 ; **********************************************************************
 
-kDisBrack:  .EQU 5              ;Bracket flag
-kDisImmed:  .EQU 4              ;Immediate value flag
-kDisWord:   .EQU 3              ;Immediate value is word (not byte) flag
-kDisLength: .EQU 2              ;Substite two characters (not one) flag
-kDisMask:   .EQU 0x03           ;Mask type 0=0x07,1=0x18,2=0x30,3=0x38
+kDisBrack  = 5              ;Bracket flag
+kDisImmed  = 4              ;Immediate value flag
+kDisWord   = 3              ;Immediate value is word (not byte) flag
+kDisLength = 2              ;Substite two characters (not one) flag
+kDisMask   = 0x03           ;Mask type 0=0x07,1=0x18,2=0x30,3=0x38
 ; Should create EQUates for all numeric values used below. It's the law!
 
 
@@ -53,7 +53,15 @@ kDisMask:   .EQU 0x03           ;Mask type 0=0x07,1=0x18,2=0x30,3=0x38
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Disassembler: Write full disassembly to string buffer
 ;   On entry: HL = Start of instruction to be disassembled
@@ -76,21 +84,21 @@ DisWrInstruction:
             LD   E,L
             CALL StrWrAddress   ;Write address, colon and space
             LD   B,C            ;Get length of instruction
-@Opcode:    LD   A,(HL)         ;Get instruction opcode
+.Opcode:    LD   A,(HL)         ;Get instruction opcode
             CALL StrWrHexByte   ;Write as hex byte
             CALL StrWrSpace     ;Write space
             INC  HL             ;Point to next byte 
-            DJNZ @Opcode        ;Loop until all hex bytes written
+            DJNZ .Opcode        ;Loop until all hex bytes written
             LD   A,19           ;Column number
             CALL StrWrPadding   ;Pad with spaces to specified column
             LD   B,C            ;Get length of instruction
-@Ascii:     LD   A,(DE)         ;Get instruction opcode
+.Ascii:     LD   A,(DE)         ;Get instruction opcode
             CALL StrWrAsciiChar ;Write as ASCII character
             INC  DE             ;Point to next byte 
-            DJNZ @Ascii         ;Loop until all characters written
+            DJNZ .Ascii         ;Loop until all characters written
             LD   A,25           ;Column number
             CALL StrWrPadding   ;Pad with spaces to specified column
-@Mnemonic:  LD   DE,kStrBuffer+80
+.Mnemonic:  LD   DE,kStrBuffer+80
             CALL StrAppend      ;Append disassembly string
 ;           CALL StrWrNewLine   ;Write new line to string buffer
             LD   A,C            ;Get length of instruction in bytes
@@ -124,55 +132,55 @@ DisWrMnemonic:
 ; Check for index register instruction (IX or IY)
             LD   A,D            ;Could have been written LD A,(IY+0)
             CP   0xDD           ;IX instruction?
-            JR   Z,@Index       ;Yes, so skip
+            JR   Z,.Index       ;Yes, so skip
             CP   0xFD           ;IY instruction?
-            JR   NZ,@NotIndex   ;No, so skip
-@Index:     LD   (iDisIndex),A  ;Store index instruction opcode
+            JR   NZ,.NotIndex   ;No, so skip
+.Index:     LD   (iDisIndex),A  ;Store index instruction opcode
             INC  B              ;Increment offset to primary opcode
             LD   A,(IY+1)       ;Get next opcode byte
-@NotIndex:
+.NotIndex:
 ; Check for extended instruction
             CP   0xCB           ;Extended instruction?
-            JR   Z,@Extend      ;Yes, so skip
+            JR   Z,.Extend      ;Yes, so skip
             CP   0xED           ;Extended instruction?
-            JR   NZ,@NotExtend  ;No, so skip
-@Extend:    LD   E,A            ;Store prefix for extended instructions
+            JR   NZ,.NotExtend  ;No, so skip
+.Extend:    LD   E,A            ;Store prefix for extended instructions
             INC  B              ;Increment offset to primary opcode
             LD   A,(iDisIndex)  ;Get index instruction opcode
             OR   A              ;Is this an index instruction?
             LD   A,B            ;Prepare to read primary opcode
-            JR   Z,@ExNoIndx    ;No, so skip
+            JR   Z,.ExNoIndx    ;No, so skip
             INC  A              ;Yes, skip index displacement byte
-@ExNoIndx:  CALL DisGetOpcode   ;Get primary opcode
-@NotExtend: LD   D,A            ;Remember instruction's primary opcode
+.ExNoIndx:  CALL DisGetOpcode   ;Get primary opcode
+.NotExtend: LD   D,A            ;Remember instruction's primary opcode
             LD   (iDisOpcode),A ;Store primary opcode
 ; Locate instruction table entry for current instruction (pointer to by HL)
 ; BASIC: (i And iMask(n)) = (iValue(n) And iMask(n)) ?
-@Table:     LD   A,(IX+0)       ;Get opcode value from table
+.Table:     LD   A,(IX+0)       ;Get opcode value from table
             AND  (IX+1)         ;AND with opcode mask from table
             LD   C,A            ;Store Value AND Mask
             LD   A,(IX+1)       ;Get opcode mask from table
             AND  D              ;AND with instruction being disassembled
             CP   C              ;Is this the correct table entry?
-            JR   NZ,@NotFound   ;No, so this is not the correct table
+            JR   NZ,.NotFound   ;No, so this is not the correct table
 ; BASIC: ... AND (p = iPrecode(n)) ?
             XOR  A              ;Default precode for comparison = 0x00
             BIT  7,(IX+3)       ;Precode (index or extended)?
-            JR   Z,@GotPrCode   ;No, so skip
+            JR   Z,.GotPrCode   ;No, so skip
             LD   A,0xCB         ;Default precode for comparison = 0xCB
             BIT  6,(IX+3)       ;Precode = 0xED?
-            JR   Z,@GotPrCode   ;No, so skip
+            JR   Z,.GotPrCode   ;No, so skip
             LD   A,0xED         ;Yes, so precode for comparison = 0xED
-@GotPrCode: CP   E              ;Compare table precode with instruction
-            JR   Z,@Found       ;Yes, so this is the correct table
-@NotFound:  PUSH BC             ;Preserve BC
+.GotPrCode: CP   E              ;Compare table precode with instruction
+            JR   Z,.Found       ;Yes, so this is the correct table
+.NotFound:  PUSH BC             ;Preserve BC
             LD   BC,5           ;No, so try next table entry
             ADD  IX,BC          ;Point to next table entry
             POP  BC             ;Restore BC
-            JR   @Table
+            JR   .Table
 ; We now have the correct instruction table entry (pointer to by IX)
 ; BASIC: (p = iPrecode(n)) And (i And iMask(n)) = (iValue(n) And iMask(n))
-@Found:     LD   A,(IX+2)       ;Get operation string number
+.Found:     LD   A,(IX+2)       ;Get operation string number
             LD   (iDisOpStr),A  ;Store operation string number
             CALL DisWrString    ;Write operation string
             CALL StrWrSpace
@@ -184,20 +192,20 @@ DisWrMnemonic:
 ; BASIC: Operand sString(iOperand2(n)), t
             LD   A,(IX+4)       ;Get operand #2 string number
             DEC  A              ;Is is 1? (null string)
-            JR   Z,@NoOp2       ;Yes, so skip this operand
+            JR   Z,.NoOp2       ;Yes, so skip this operand
             LD   A,','          ;Get comma character
             CALL StrWrChar      ;Write comma to string
             LD   A,(IX+4)       ;Get operand #2 string number
             LD   C,D            ;Get primary opcode value
             CALL DisWrOperand
-@NoOp2:
+.NoOp2:
 ; If relative jump show absolute address in brackets
             LD   A,(iDisOpStr)  ;Get operation string number
             CP   kDisJR         ;JR instruction?
-            JR   Z,@Rel         ;Yes, so skip
+            JR   Z,.Rel         ;Yes, so skip
             CP   kDisDJNZ       ;DJNZ instruction?
-            JR   NZ,@NotRel     ;No so skip
-@Rel:       LD   DE,szDisTo     ;String = "  (to "
+            JR   NZ,.NotRel     ;No so skip
+.Rel:       LD   DE,szDisTo     ;String = "  (to "
             CALL StrAppendZ     ;Append zero terminated string
             PUSH IY             ;Push address of instruction
             POP  HL             ;POP address of instruction
@@ -207,16 +215,16 @@ DisWrMnemonic:
             LD   E,A            ;Get displacement lo (signed byte)
             LD   D,0            ;Default to hi byte = zero
             BIT  7,A            ;Displacement negative?
-            JR   Z,@JRadd       ;No, so skip
+            JR   Z,.JRadd       ;No, so skip
             DEC  D              ;Yes, so set hi byte to 0xFF
-@JRadd:     ADD  HL,DE          ;Add signed 16-bit displacement
+.JRadd:     ADD  HL,DE          ;Add signed 16-bit displacement
             LD   D,H            ;Get destination address hi byte
             LD   E,L            ;Get destination address lo byte
             CALL WrHexPrefix    ;Write hex prefix to string
             CALL StrWrHexWord   ;Write hex word to string
             LD   A,')'          ;Get close bracket character
             CALL StrWrChar      ;Write close bracket to string
-@NotRel:
+.NotRel:
 ; Finish building mnemonic string
             LD   A,B            ;Get offset into instruction
             INC  A              ;Increment to give instruction length
@@ -243,9 +251,9 @@ DisGetNextAddress:
 ; Determine if last instruction may have changed program flow
             LD   A,(iDisOpStr)  ;Get operation string number
             CP   kDisFlowF      ;Compare with first flow control instr
-            JR   C,@Done2       ;Not a flow instruction so we're done
+            JR   C,.Done2       ;Not a flow instruction so we're done
             CP   kDisFlowL+1    ;Compare with first flow control instr
-            JR   NC,@Done2      ;Not a flow instruction so we're done
+            JR   NC,.Done2      ;Not a flow instruction so we're done
 ; The current instruction is a flow controlling instruction eg. CALL
 ; Consider if the instruction is conditional or not by looking at
 ; operand 1 string number to see if it is the operand substitution
@@ -253,12 +261,12 @@ DisGetNextAddress:
             LD   A,(iDisOp1Str) ;Get operand 1 string number
             LD   B,kDisMskC     ;Prepare condition 'c' mask
             CP   kDisSubC       ;Is operand 'c'? eg. 'Z' in 'JR Z,addr'
-            JR   Z,@Condition   ;Yes, so go handle condition
+            JR   Z,.Condition   ;Yes, so go handle condition
             LD   B,kDisMskCC    ;Prepare condition 'cc' mask
             CP   kDisSubCC      ;Is operand 'cc'? eg. 'PE' in 'JP PE,addr'
-            JR   NZ,@NoCond     ;No, so skip condition evaluation
+            JR   NZ,.NoCond     ;No, so skip condition evaluation
 ; Evaluate condition. B is the conditions bit mask
-@Condition: LD   A,(iDisOpcode) ;Get instruction's primary opcode
+.Condition: LD   A,(iDisOpcode) ;Get instruction's primary opcode
             AND  B              ;Mask to give condition bits, Cy=0
             RRA                 ;Shift condition bits to bits 0 to 1
             RRA                 ;  to give offset in table
@@ -273,79 +281,79 @@ DisGetNextAddress:
             PUSH HL
             LD   HL,DisConTab-1 ;Point to start of condition table -1
             INC  B              ;Increment loop counter
-@IncPtr:    INC  HL             ;Inc pointer into condition table
-            DJNZ @IncPtr        ;Go inc again until we are there
+.IncPtr:    INC  HL             ;Inc pointer into condition table
+            DJNZ .IncPtr        ;Go inc again until we are there
             LD   A,(iAF)        ;Get flags register value
-            JR   C,@ConTest     ;Looking for flag low?
+            JR   C,.ConTest     ;Looking for flag low?
             XOR  (HL)           ;Yes, so invert required flag bit
-@ConTest:   AND   (HL)          ;Mask required flag bit (clears Cy)
+.ConTest:   AND   (HL)          ;Mask required flag bit (clears Cy)
             POP  HL
-            JR   Z,@Done        ;We're done if condition not met
+            JR   Z,.Done        ;We're done if condition not met
 ; Determine address after executing the flow controlling instruction
 ; when the condition is met (if there is a condition)
-@NoCond:    LD   A,(iDisOpStr)  ;Get operation string number
+.NoCond:    LD   A,(iDisOpStr)  ;Get operation string number
             CP   kDisCALL       ;Instruction = "CALL"
-            JR   Z,@CALL
+            JR   Z,.CALL
             CP   kDisDJNZ       ;Instruction = "DJNZ"
-            JR   Z,@DJNZ
+            JR   Z,.DJNZ
             CP   kDisJP         ;Instruction = "JP"
-            JR   Z,@JP
+            JR   Z,.JP
             CP   kDisJR         ;Instruction = "JR"
-            JR   Z,@JR
+            JR   Z,.JR
             CP   kDisRST        ;Instruction = "RST"
-            JR   Z,@RST
+            JR   Z,.RST
 ; Instruction: RET or RET cc or RETI or RETN
-@RET:       LD   HL,(iSP)       ;Get stack pointer at breakpoint
-            JR   @JP2           ;Go to addess pointed to by HL
+.RET:       LD   HL,(iSP)       ;Get stack pointer at breakpoint
+            JR   .JP2           ;Go to addess pointed to by HL
 ; Instruction: DJNZ n
-@DJNZ:      LD   A,(iBC+1)      ;Get register B value
+.DJNZ:      LD   A,(iBC+1)      ;Get register B value
             DEC   A             ;Will B reach zero?
-            JR   Z,@Done        ;Yes, so we're done
-;           JR   @JR            ;No, so go treat as JR instruction
+            JR   Z,.Done        ;Yes, so we're done
+;           JR   .JR            ;No, so go treat as JR instruction
 ; Instruction: JR n or JR c,n
-@JR:        LD   A,(iDisImmed)  ;Get immediate value from instruction
+.JR:        LD   A,(iDisImmed)  ;Get immediate value from instruction
             LD   E,A            ;Get displacement lo (signed byte)
             LD   D,0            ;Default to hi byte = zero
             BIT  7,A            ;Displacement negative?
-            JR   Z,@JRadd       ;No, so skip
+            JR   Z,.JRadd       ;No, so skip
             DEC  D              ;Yes, so set hi byte to 0xFF
-@JRadd:     ADD  HL,DE          ;Add signed 16-bit displacement
-@Done2:     JR   @Done
+.JRadd:     ADD  HL,DE          ;Add signed 16-bit displacement
+.Done2:     JR   .Done
 ; Instruction: JP nn or JP cc,nn or JP HL or JP IX or JP IY
-@JP:        LD   A,(iDisOp1Str) ;Get operand 1 string number
+.JP:        LD   A,(iDisOp1Str) ;Get operand 1 string number
             CP   kDisSubCC      ;Is operand 'cc'? eg. 'PE' in 'JP PE,addr'
-            JR   Z,@GOTOnn      ;Yes, so goto address nn
+            JR   Z,.GOTOnn      ;Yes, so goto address nn
             CP   kDisSubNN      ;Instruction = JP nn ?
-            JR   Z,@GOTOnn      ;Yes, so goto address nn
+            JR   Z,.GOTOnn      ;Yes, so goto address nn
 ; Instruction: JP HL or JP IX or JP IY
             LD   HL,iHL         ;Point to register storage for HL
             LD   A,(iDisIndex)  ;Index register instruction?
             OR   A              ;No, so go JP 
-            JR   Z,@JP2
+            JR   Z,.JP2
             INC  HL             ;Point to register storage for IX
             INC  HL
             CP   0xDD           ;Instruction = JP IX
-            JR   Z,@JP2
+            JR   Z,.JP2
             INC  HL             ;Point to register storage for IX
             INC  HL
 ; Go to the address pointed to by HL
-@JP2:       LD   A,(HL)         ;Get lo byte of new address
+.JP2:       LD   A,(HL)         ;Get lo byte of new address
             INC  HL             ;Point to hi byte
             LD   H,(HL)         ;Get hi byte of new address
             LD   L,A            ;Get lo byte of newreturn address
-            JR   @Done
+            JR   .Done
 ; Instruction: RST n
-@RST:       LD   A,(iDisOpcode) ;Get primary opcode
-            AND  A,kDisMskRST   ;Mask off unwanted bits
+.RST:       LD   A,(iDisOpcode) ;Get primary opcode
+            AND  kDisMskRST   ;Mask off unwanted bits
             LD   L,A            ;Store as lo byte of new address
             LD   H,0            ;Clear hi byte of new address
-            JR   @Done
+            JR   .Done
 ; Instruction: CALL nn or CALL cc,nn
-@CALL:      ;JR  @JP            ;Treat as JP instruction
+.CALL:      ;JR  .JP            ;Treat as JP instruction
 ; Instruction: CALL nn or CALL cc,nn or JP nn pr JP cc,nn
-@GOTOnn:    LD   HL,(iDisImmed) ;Get immediate value from instruction
-;           JR   @Done
-@Done:      POP  DE
+.GOTOnn:    LD   HL,(iDisImmed) ;Get immediate value from instruction
+;           JR   .Done
+.Done:      POP  DE
             POP  BC
             POP  AF
             RET
@@ -369,28 +377,28 @@ DisWrOperand:
             AND  kDisOpMask     ;Mask off flag bits
             CP   kDisSubsL+1    ;Substitution operand string?
             JP   NC,DisWrString ;No, so just write string
-@DisSubStr: PUSH DE
+.DisSubStr: PUSH DE
             PUSH HL
 ; Calculate operand table location for this operand and get details
             LD   HL,DisOperandTable-2
             ADD  A,A            ;Two bytes per entry
             ADD  A,L            ;Add to start of table
             LD   L,A            ;Store updated lo byte
-            JR   NC,@NoOverFlo  ;Skip if no overflow
+            JR   NC,.NoOverFlo  ;Skip if no overflow
             INC  H              ;Overflow so increment hi byte
-@NoOverFlo: LD   E,(HL)         ;Get substitution string number
+.NoOverFlo: LD   E,(HL)         ;Get substitution string number
             INC  HL             ;Point to BIILMM bits
             LD   D,(HL)         ;Get BIILMM function bits
             PUSH DE             ;So we can use E for scratch reg
 ; Process this operand as detailed in DE, left bracket?
             BIT  kDisBrack,D    ;Bracket flagged?
-            JR   Z,@NoBracL     ;No, so skip
+            JR   Z,.NoBracL     ;No, so skip
             LD   A,'('          ;Get left bracket character
             CALL StrWrChar      ;Print left bracket
-@NoBracL:   
+.NoBracL:   
 ; Process this operand as detailed in DE, immediate value?
             BIT  kDisImmed,D    ;Immediate value flagged?
-            JR   Z,@NoImmedia   ;No, so skip
+            JR   Z,.NoImmedia   ;No, so skip
             CALL WrHexPrefix    ;Print "0x" (or whatever we use)
             INC  B              ;Increment offset to lo byte
             LD   A,B            ;Offset to instruction byte
@@ -398,69 +406,69 @@ DisWrOperand:
             LD   (iDisImmed),A  ;Store lo byte of immediate value
             LD   E,A            ;Store lo byte of immediate value
             BIT  kDisWord,D     ;Immediate value is a word?
-            JR   Z,@ImmedLo     ;No, so skip
+            JR   Z,.ImmedLo     ;No, so skip
             INC  B              ;Increment offset to hi byte
             LD   A,B            ;Offset to instruction byte
             CALL DisGetOpcode   ;Get hi byte of immediate value
             LD   (iDisImmed+1),A  ;Store hi byte of immediate value
             CALL StrWrHexByte   ;Print hi byte of immediate value
-@ImmedLo:   LD   A,E            ;Restore lo byte of immediate value
+.ImmedLo:   LD   A,E            ;Restore lo byte of immediate value
             CALL StrWrHexByte   ;Print lo byte of immediate value
-@NoImmedia:
+.NoImmedia:
 ; Process this operand as detailed in DE, right bracket?
             BIT  kDisBrack,D    ;Bracket flagged?
-            JR   Z,@NoBracR     ;No, so skip
+            JR   Z,.NoBracR     ;No, so skip
             LD   A,')'          ;Get right bracket character
             CALL StrWrChar      ;Print right bracket
-@NoBracR:   
+.NoBracR:   
 ; Process this operand as detailed in DE, substitution string?
             POP  DE             ;Restore details
             LD   A,E            ;Get substitution string number
             OR   A              ;String specified?
-            JR   Z,@SubEnd      ;No, so skip
+            JR   Z,.SubEnd      ;No, so skip
             LD   A,D            ;Get BIILMM function bits
-            AND  A,kDisMask     ;Separate mask type bits
+            AND  kDisMask     ;Separate mask type bits
             LD   HL,DisMaskTable  ;Point to table of mask bits
             ADD  A,L            ;Add to start of table
             LD   L,A            ;Store updated lo byte
-            JR   NC,@NoOFlow    ;Skip if no overflow
+            JR   NC,.NoOFlow    ;Skip if no overflow
             INC  H              ;Overflow so increment hi byte
-@NoOFlow:   LD   A,(HL)         ;Get bit mask
-            AND  A,C            ;Mask primary opcode
+.NoOFlow:   LD   A,(HL)         ;Get bit mask
+            AND  C            ;Mask primary opcode
             LD   C,A            ;Store masked primary opcode
             LD   A,(HL)         ;Get bit mask
 ; Now shift primary opcode (masked) to right the number of
 ; times it takes to shift mask byte right before bit 1 is set
-@SubsShift: SRL  A              ;Shift mask right
-            JR   C,@DoneShift   ;Bit 1 was set so we're done
+.SubsShift: SRL  A              ;Shift mask right
+            JR   C,.DoneShift   ;Bit 1 was set so we're done
             SRL  C              ;Shift primary opcode (masked) right
-            JR   @SubsShift     ;Go repeat..
-@DoneShift: BIT  kDisLength,D   ;Length bit flagged?
-            JR   Z,@Single      ;No, so skip
+            JR   .SubsShift     ;Go repeat..
+.DoneShift: BIT  kDisLength,D   ;Length bit flagged?
+            JR   Z,.Single      ;No, so skip
             SLA  C              ;Double value for two bytes
 ; C is now the offset into the substitute string
-@Single:    LD   A,E            ;Substitute string number
+.Single:    LD   A,E            ;Substitute string number
             LD   HL,DisString   ;Start of string list
             CALL FindStringInList ;Get start of string (=HL)
             LD   A,C            ;Offset into string
             ADD  A,L            ;Add to start of string
             LD   L,A            ;Store updated lo byte
-            JR   NC,@NoOver     ;Skip if no overflow
+            JR   NC,.NoOver     ;Skip if no overflow
             INC  H              ;Overflow so increment hi byte
-@NoOver:    LD   A,(HL)         ;Get substitute character
+.NoOver:    LD   A,(HL)         ;Get substitute character
             CP   '*'            ;Code for 2 byte HL/IX/IY string
-            JR   NZ,@NotStar    ;No, so skip
+            JR   NZ,.NotStar    ;No, so skip
             LD   A,24           ;String = "HL"
             CALL DisWrString    ;Print string with substitutions
-            JR   @SubEnd
-@NotStar:   CALL DisWrChar      ;Print character with filters
+            JR   .SubEnd
+.NotStar:   CALL DisWrChar      ;Print character with filters
             BIT  kDisLength,D   ;Length bit flagged?
-            JR   Z,@SubEnd      ;No, so skip
+            JR   Z,.SubEnd      ;No, so skip
             INC  HL             ;Point to second substitute character
             LD   A,(HL)         ;Get substitute character
             CP   '.'            ;Do not print '.' character
             CALL NZ,DisWrChar   ;Print character with filters
-@SubEnd:    POP  HL
+.SubEnd:    POP  HL
             POP  DE
             RET
 
@@ -489,14 +497,14 @@ DisGetOpcode:
 ; and replaces "-" with "(HL)"
 DisWrChar:
             PUSH AF
-            AND  A,0x7F         ;Mask off bit 7 (string start bit)
+            AND  0x7F         ;Mask off bit 7 (string start bit)
             CP   '-'            ;Code for "(HL)" ?
-            JR   Z,@SubHL       ;Yes, so go write "(HL)" instead
+            JR   Z,.SubHL       ;Yes, so go write "(HL)" instead
             CALL StrWrChar      ;Print character
-            JR   @Done
-@SubHL:     LD   A,21           ;String number for "(HL)"
+            JR   .Done
+.SubHL:     LD   A,21           ;String number for "(HL)"
             CALL DisWrString    ;Write "(HL)" instead of "-"
-@Done:      POP  AF
+.Done:      POP  AF
             RET                 ;JP instead to save byte
 
 
@@ -518,36 +526,36 @@ DisWrString:
             PUSH HL
             LD   L,A            ;Store string number
             CP   kDisBracHL     ;String = (HL) ?
-            JR   Z,@Subs        ;Yes, so go do substitution
+            JR   Z,.Subs        ;Yes, so go do substitution
             CP   kDisHL         ;String = HL ?
-            JR   NZ,@GotString  ;No, so just write the string
+            JR   NZ,.GotString  ;No, so just write the string
 ; Substitute IX/IY in HL string or (IX/IY+d) in (HL) string
-@Subs:      LD   A,(iDisIndex)  ;Get index instruction opcode
+.Subs:      LD   A,(iDisIndex)  ;Get index instruction opcode
             OR   A              ;Index instruction?
-            JR   Z,@GotString   ;No, so skip substitutions
+            JR   Z,.GotString   ;No, so skip substitutions
             INC  L              ;Increment to IX string number
             CP   0xDD           ;IX instruction?
-            JR   Z,@GotString   ;Yes, so go write it
+            JR   Z,.GotString   ;Yes, so go write it
             INC  L              ;Increment to IY string
-@GotString: LD   A,L            ;Get string number
+.GotString: LD   A,L            ;Get string number
             LD   HL,DisString   ;Start of string list
             CALL FindStringInList ;Find start of string A
 ; HL now points to disassembler string
-@Char:      LD   A,(HL)         ;Get character from string
+.Char:      LD   A,(HL)         ;Get character from string
             AND  0x7F           ;Mask off string start bit
             CP   '+'            ;Is it a '+' sign (displacement) ?
-            JR   Z,@Plus        ;No, so skip to next character
+            JR   Z,.Plus        ;No, so skip to next character
             CALL StrWrChar      ;Write character
-            JR   @Next          ;No, so skip to next character
+            JR   .Next          ;No, so skip to next character
 ; Encountered a plus sign so expecting to show a displacement
-@Plus:      LD   A,(iDisOpStr)  ;Get instruction string
+.Plus:      LD   A,(iDisOpStr)  ;Get instruction string
             CP   kDisJP         ;JP instruction?
-            JR   NZ,@Displace   ;No, so go show displacement
+            JR   NZ,.Displace   ;No, so go show displacement
             LD   A,')'          ;Yes, so just terminate with ')'
             CALL StrWrChar      ;Write close bracket character
-            JR   @End
+            JR   .End
 ; Show displacement in (IX+...) and (IY+...) instructions
-@Displace:  LD   A,'+'
+.Displace:  LD   A,'+'
             CALL StrWrChar      ;Write plus character
             CALL WrHexPrefix
             LD   A,(IY+2)       ;Get index instruction displacement
@@ -556,10 +564,10 @@ DisWrString:
             CALL StrWrChar      ;Write close bracket character
             INC  B              ;Increment opcode offset
 ; Consider next character in disassembler string
-@Next:      INC  HL             ;Point to next character
+.Next:      INC  HL             ;Point to next character
             BIT  7,(HL)         ;Start of new string?
-            JR   Z,@Char        ;No, so go get next character
-@End:       POP  HL
+            JR   Z,.Char        ;No, so go get next character
+.End:       POP  HL
             POP  AF
             RET
 
@@ -649,14 +657,22 @@ DisConTab:  .DB  0x40           ;xZxxxxxx   NZ,        Z=0,  Not Zero
 ;    10xx xxxx = Precode 0xCB
 ;    11xx xxxx = Precode 0xED
 ; Precodes are used by the processor's extended instructions
-#INCLUDE    Monitor\DisData.asm
+	INCLUDE Monitor/DisData.asm
 
 
 ; **********************************************************************
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iDisIndex:  .DB  0x00           ;Index instruction opcode
 iDisOpStr:  .DB  0x00           ;Operation string number

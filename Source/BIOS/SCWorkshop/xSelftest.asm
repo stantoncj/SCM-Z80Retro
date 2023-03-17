@@ -13,14 +13,22 @@
 ;
 
 ; Must be defined in hardware manager module. eg:
-;kPrtOut:    .EQU 0              ;Assume digital status port is present
+;kPrtOut    = 0              ;Assume digital status port is present
 
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Initialially we assume that there is no RAM so we avoid subroutines.
 
@@ -28,12 +36,12 @@
 H_Test:     DI                  ;Disable interrupts
 Selftest:   LD   DE,1           ;Prepared for delay loop
             LD   A,E            ;First byte to write to LEDs = 0x01
-@Loop1:     OUT  (kPrtOut),A    ;Write to LEDs
+.Loop1:     OUT  (kPrtOut),A    ;Write to LEDs
             LD   HL,0xE1C0      ;Set delay time (approx 8000 loops)
-@Delay1:    ADD  HL,DE          ;Delay loop increments HL until
-            JR   NC,@Delay1     ;  it reaches zero
+.Delay1:    ADD  HL,DE          ;Delay loop increments HL until
+            JR   NC,.Delay1     ;  it reaches zero
             RLCA                ;Rotate LED bit left
-            JR   NC,@Loop1      ;Repeat until last LED cleared
+            JR   NC,.Loop1      ;Repeat until last LED cleared
             XOR  A              ;Clear A
             OUT  (kPrtOut),A    ;All LEDs off
 

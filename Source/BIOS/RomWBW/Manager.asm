@@ -4,12 +4,12 @@
 ; **********************************************************************
 
 ; Bios constants - name and version number
-#DEFINE     BNAME "RomWBW"      ;Bios name
-kBiosID:    .EQU BI_ROMWBW      ;Bios ID (use constant BI_xxxx)
-kBiosMajor: .EQU 1              ;Bios version: revision
-kBiosMinor: .EQU 1              ;Bios version: revision
-kBiosRevis: .EQU 0              ;Bios version: revision
-;BiosTouch: .EQU 20191114       ;Last date this BIOS code touched
+	DEFINE+ BNAME "RomWBW" ;Bios name
+kBiosID    = BI_ROMWBW      ;Bios ID (use constant BI_xxxx)
+kBiosMajor = 1              ;Bios version revision
+kBiosMinor = 1              ;Bios version revision
+kBiosRevis = 0              ;Bios version revision
+;BiosTouch = 20191114       ;Last date this BIOS code touched
 
 
 ; **********************************************************************
@@ -17,19 +17,27 @@ kBiosRevis: .EQU 0              ;Bios version: revision
 ; **********************************************************************
 
 ; Include jump table at start of BIOS
-#INCLUDE    BIOS\BIOS_JumpTable.asm
+	INCLUDE BIOS/BIOS_JumpTable.asm
 
 ; Include common BIOS functions and API shims
-#INCLUDE    BIOS\BIOS_Common.asm
+	INCLUDE BIOS/BIOS_Common.asm
 
 ; Include any additional source files needed for this BIOS
-#INCLUDE    BIOS\RomWBW\Terminal.asm
+	INCLUDE BIOS/RomWBW/Terminal.asm
 
 
 ; **********************************************************************
 ; Ensure we assemble to code area
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
@@ -48,11 +56,11 @@ H_Test:     JP  CStrt           ;No self-test
 H_Init:     XOR  A
             LD   (iHwFlags),A   ;Clear hardware flags
             CALL Terminal_Initialise
-            LD   HL,@Pointers
+            LD   HL,.Pointers
             LD   B,4
             LD   A,kFnDev1In
             JP   InitJumps
-@Pointers:
+.Pointers:
             ; Device 1 = Serial terminal
             .DW  Terminal_InputChar
             .DW  Terminal_OutputChar
@@ -97,25 +105,25 @@ H_SetBaud:  XOR  A              ;Return failure (A=0 and Z flagged)
 ;                 2 = Hardware generated timer events
 ;   On exit:  AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
-H_IdleSet:  LD   HL,@Vector     ;Point to idle mode 0 vector
+H_IdleSet:  LD   HL,.Vector     ;Point to idle mode 0 vector
             OR   A              ;A=0?
-            JR   Z,@IdleSet     ;Yes, so skip
+            JR   Z,.IdleSet     ;Yes, so skip
             INC  HL             ;Point to idle mode 1 vector
             INC  HL
             ;LD   A,0xFF        ;Initialise software timer
             ;LD   (iHwIdle),A   ;  to roll over immediately
             ;LD   A,(iHwFlags)  ;Get device present flags
             ;BIT  4,A           ;Is CTC #1 present?
-            ;JR   Z,@IdleSet    ;No, so set for software polling
+            ;JR   Z,.IdleSet    ;No, so set for software polling
             ;INC  HL            ;Point to idle mode 2 vector
             ;INC  HL
 ; Set up event handler by writing to jump table
-@IdleSet:   LD   A,kFnIdle      ;Jump table 0x0C = idle handler
+.IdleSet:   LD   A,kFnIdle      ;Jump table 0x0C = idle handler
             JP   InitJump       ;Write jump table entry A
-@Return:    XOR  A              ;Return no event (A=0 and Z flagged)
+.Return:    XOR  A              ;Return no event (A=0 and Z flagged)
             RET                 ;Idle mode zero routine
 ; Vector for event handler
-@Vector:    .DW  @Return        ;Mode 0 = Off
+.Vector:    .DW  .Return        ;Mode 0 = Off
             .DW  H_PollT1       ;Mode 1 = Software generated
 
 ; **********************************************************************
@@ -136,10 +144,10 @@ H_IdleSet:  LD   HL,@Vector     ;Point to idle mode 0 vector
 H_PollT1:   LD   A,(iHwIdle)    ;Get loop counter
             ADD  A,6            ;Add to loop counter
             LD   (iHwIdle),A    ;Store updated counter
-            JR   C,@RollOver    ;Skip if roll over (1ms event)
+            JR   C,.RollOver    ;Skip if roll over (1ms event)
             XOR   A             ;No event so Z flagged and A = 0
             RET
-@RollOver:  OR    0xFF          ;1ms event so NZ flagged and A != 0
+.RollOver:  OR    0xFF          ;1ms event so NZ flagged and A != 0
             RET
 
 
@@ -149,9 +157,9 @@ H_PollT1:   LD   A,(iHwIdle)    ;Get loop counter
 ;   On exit:  AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ;Hardware_Devices:
-H_MsgDevs:  LD   DE,@szHwList   ;Simulated hardware list message
+H_MsgDevs:  LD   DE,.szHwList   ;Simulated hardware list message
             JP   OutputStr      ;Output string
-@szHwList:  .DB  "RomWBW console device",kNewLine,kNull
+.szHwList:  .DB  "RomWBW console device",kNewLine,kNull
 
 
 ; **********************************************************************
@@ -206,7 +214,15 @@ H_ExecROM:  PUSH DE             ;Jump to DE by pushing on
 ; **  Workspace (in RAM)                                              **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iHwIdle:    .DB  0              ;Poll timer count
 

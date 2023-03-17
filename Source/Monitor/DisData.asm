@@ -1,29 +1,29 @@
 
 
 
-#IF PROCESSOR = "Z180"
-#DEFINE Z180OPC
-#ENDIF
+	IF PROCESSOR = "Z180"
+	DEFINE+ Z180OPC 
+	ENDIF
 
 
-kDisSubsL:	.EQU 13	;Last operand substitution string
-kDisSubNN:	.EQU 4	;Operand substitution string 'nn'
-kDisSubC:	.EQU 10	;Operand substitution string 'c'
-kDisSubCC:	.EQU 11	;Operand substitution string 'cc'
-kDisBracHL:	.EQU 21	;Bracketed HL
-kDisHL:	.EQU 24	;HL
-kDisFlowF:	.EQU 27	;First flow control instructions
-kDisFlowL:	.EQU 34	;Last flow control instructions
-kDisJR:	.EQU 27	;Operation string 'JR'
-kDisDJNZ:	.EQU 28	;Operation string 'DJNZ'
-kDisRST:	.EQU 29	;Operation string 'RST'
-kDisJP:	.EQU 30	;Operation string 'JP'
-kDisCALL:	.EQU 31	;Operation string 'CALL'
-kDisRET:	.EQU 32	;Operation string 'RET'
-kDisOpMask:	.EQU 0x3F	;Operand 1 mask to exclude pre-code bits
-kDisMskC:	.EQU 0x18	;Condition bit mask for Operand 1 = C
-kDisMskCC:	.EQU 0x38	;Condition bit mask for Operand 1 = CC
-kDisMskRST:	.EQU 0x38	;Restart address bits
+kDisSubsL	= 13	;Last operand substitution string
+kDisSubNN	= 4	;Operand substitution string 'nn'
+kDisSubC	= 10	;Operand substitution string 'c'
+kDisSubCC	= 11	;Operand substitution string 'cc'
+kDisBracHL	= 21	;Bracketed HL
+kDisHL	= 24	;HL
+kDisFlowF	= 27	;First flow control instructions
+kDisFlowL	= 34	;Last flow control instructions
+kDisJR	= 27	;Operation string 'JR'
+kDisDJNZ	= 28	;Operation string 'DJNZ'
+kDisRST	= 29	;Operation string 'RST'
+kDisJP	= 30	;Operation string 'JP'
+kDisCALL	= 31	;Operation string 'CALL'
+kDisRET	= 32	;Operation string 'RET'
+kDisOpMask	= 0x3F	;Operand 1 mask to exclude pre-code bits
+kDisMskC	= 0x18	;Condition bit mask for Operand 1 = C
+kDisMskCC	= 0x38	;Condition bit mask for Operand 1 = CC
+kDisMskRST	= 0x38	;Restart address bits
 
 DisString:
 	.DB  0x80                              	;String 0x01 = 
@@ -135,7 +135,7 @@ DisString:
 	.DB  0x80+'S',"UB"                     	;String 0x6B = SUB
 	.DB  0x80+'X',"OR"                     	;String 0x6C = XOR
 	.DB  0x80+'?',"???"                    	;String 0x6D = ????
-#IFDEF     Z180OPC
+	IFDEF Z180OPC
 	.DB  0x80+'I',"N0"                      ;String 0x6E = IN0
 	.DB  0x80+'O',"UT0"                     ;String 0x6F = OUT0
 	.DB  0x80+'O',"TDM"                     ;String 0x70 = OTDM
@@ -146,7 +146,7 @@ DisString:
 	.DB  0x80+'O',"TIM"                     ;String 0x75 = OTIM
 	.DB  0x80+'S',"LP"                      ;String 0x76 = SLP
 	.DB  0x80+'M',"LT"                      ;String 0x77 = MLT
-#ENDIF
+	ENDIF
 	.DB  0x80
 
 DisInst:
@@ -259,7 +259,7 @@ DisInst:
 	.DB  0xD6,0xFF,0x6B,0x02,0x01 ;Opcode: 0xD6 - SUB  n   ,    
 	.DB  0xA8,0xF8,0x6C,0x07,0x01 ;Opcode: 0xA8 - XOR  r2  ,    
 	.DB  0xEE,0xFF,0x6C,0x02,0x01 ;Opcode: 0xEE - XOR  n   ,  
-#IFDEF     Z180OPC
+	IFDEF Z180OPC
 	.DB  0x00,0xC7,0x6E,0xC6,0x03 ;Opcode: 0x00 - IN0  r  ,(n) 
     .DB  0x01,0xC7,0x6F,0xC3,0x06 ;Opcode: 0x01 - OUT0 (n) ,r
 	.DB  0x8B,0xFF,0x70,0xC1,0x01 ;Opcode: 0x8B - OTDM     ,
@@ -272,6 +272,6 @@ DisInst:
 	.DB  0x64,0xFF,0x73,0xC2,0x01 ;Opcode: 0x64 - TST   n  ,
 	.DB  0x34,0xFF,0x73,0xE5,0x01 ;Opcode: 0x34 - TST (HL) ,
 	.DB  0x4C,0xCF,0x77,0xC8,0x01 ;Opcode: 0x4C - MLT  dd  ,
-#ENDIF	
+	ENDIF 
 	.DB  0x00,0x00,0x6D,0x01,0x01 ;Opcode: 0x00 - ????     ,    
 	.DB  0x00,0x00,0x6D,0xC1,0x01 ;Opcode: 0x00 - ????     ,    

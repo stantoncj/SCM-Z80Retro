@@ -11,7 +11,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; Utility: Convert character to numberic value
@@ -25,23 +33,23 @@
 ConvertCharToNumber:
             CALL ConvertCharToUCase
             CP   '0'            ;Character < '0'?
-            JR   C,@Bad         ;Yes, so no hex character
+            JR   C,.Bad         ;Yes, so no hex character
             CP   '9'+1          ;Character <= '9'?
-            JR   C,@OK          ;Yes, got hex character
+            JR   C,.OK          ;Yes, got hex character
             CP   'A'            ;Character < 'A'
-            JR   C,@Bad         ;Yes, so not hex character
+            JR   C,.Bad         ;Yes, so not hex character
             CP   'F'+1          ;Character <= 'F'
-            JR   C,@OK          ;No, not hex
+            JR   C,.OK          ;No, not hex
 ; Character is not a hex digit so return 
-@Bad:       LD   A,0xFF         ;Return status: not hex character
+.Bad:       LD   A,0xFF         ;Return status: not hex character
             OR   A              ;  A = 0xFF and NZ flagged
             RET
 ; Character is a hex digit so adjust from ASCII to number
-@OK:        SUB  '0'            ;Subtract '0'
+.OK:        SUB  '0'            ;Subtract '0'
             CP   0x0A           ;Number < 10 ?
-            JR   C,@Finished    ;Yes, so finished
+            JR   C,.Finished    ;Yes, so finished
             SUB  0x07           ;Adjust for 'A' to 'F'
-@Finished:  CP   A              ;Return A = number (0 to 15) and Z flagged to
+.Finished:  CP   A              ;Return A = number (0 to 15) and Z flagged to
             RET                 ;  indicate character is a valid hex digital
 
 

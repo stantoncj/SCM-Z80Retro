@@ -56,20 +56,20 @@
 ;       +-------  Interrupt request
 
 ; Externally definitions required:
-;kACIABase: .EQU kACIA2         ;I/O base address
-;kACIACont: .EQU kACIABase+0    ;I/O address of control register
-;kACIAData: .EQU kACIABase+1    ;I/O address of data register
+;kACIABase = kACIA2         ;I/O base address
+;kACIACont = kACIABase+0    ;I/O address of control register
+;kACIAData = kACIABase+1    ;I/O address of data register
 
 ; Hard coded constants don't use EQUs so this file can be included 
-; without breaking the use of only local labels (@<label>)
+; without breaking the use of only local labels (.<label>)
 ;
 ; Control register values
-;kACIA1Rst: .EQU 0b00000011     ;Master reset
-;kACIA1Ini: .EQU 0b00010110     ;No int, RTS low, 8+1, /64
+;kACIA1Rst = 0b00000011     ;Master reset
+;kACIA1Ini = 0b00010110     ;No int, RTS low, 8+1, /64
 ;
 ; Status (control) register bit numbers
-;kACIARxRdy: .EQU 0             ;Receive data available bit number
-;kACIATxRdy: .EQU 1             ;Transmit data empty bit number
+;kACIARxRdy = 0             ;Receive data available bit number
+;kACIATxRdy = 1             ;Transmit data empty bit number
 ;
 ; Device detection, test 1
 ; This test just reads from the devices' status (control) register
@@ -79,8 +79,8 @@
 ; WARNING
 ; Sometimes at power up the Tx data reg empty bit is zero, but
 ; recovers after device initialised. So test 1 excludes this bit.
-;kACIAMsk1: .EQU  0b00001100    ;Mask for known bits in control reg
-;kACIATst1: .EQU  0b00000000    ;Test value following masking
+;kACIAMsk1 =  0b00001100    ;Mask for known bits in control reg
+;kACIATst1 =  0b00000000    ;Test value following masking
 ;
 ; Device detection, test 2
 ; This test just reads from the devices' status (control) register
@@ -88,25 +88,41 @@
 ; /CTS input bit = low
 ; /DCD input bit = low
 ; Transmit data register empty bit = high
-;kACIAMsk2: .EQU  0b00001110    ;Mask for known bits in control reg
-;kACIATst2: .EQU  0b00000010    ;Test value following masking
+;kACIAMsk2 =  0b00001110    ;Mask for known bits in control reg
+;kACIATst2 =  0b00000010    ;Test value following masking
 
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Interface descriptor
             .DB  0              ;Device ID code (not currently used)
-            .DW  @String        ;Pointer to device string
-            .DW  @ACIA_Init     ;Pointer to initialisation code
+            .DW  .String        ;Pointer to device string
+            .DW  .ACIA_Init     ;Pointer to initialisation code
             .DB  kACIAFlags     ;Hardware flags bit mask
-            .DW  @ACIA_Set      ;Point to device settings code
+            .DW  .ACIA_Set      ;Point to device settings code
             .DB  1              ;Number of console devices
-            .DW  @ACIA_RxA      ;Pointer to 1st channel input code
-            .DW  @ACIA_TxA      ;Pointer to 1st channel output code
-@String:    .DB  "ACIA "
+            .DW  .ACIA_RxA      ;Pointer to 1st channel input code
+            .DW  .ACIA_TxA      ;Pointer to 1st channel output code
+.String:    .DB  "ACIA "
             .DB  "@ "
-            .HEXCHAR kACIABase \ 16
-            .HEXCHAR kACIABase & 15
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kACIABase / 16")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kACIABase & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
             .DB  kNull
 
 
@@ -116,7 +132,7 @@
 ;             AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; If the device is found it is initialised
-@ACIA_Init:
+.ACIA_Init:
 ; First look to see if the device is present
 ; Test 1, just read from chip, do not write anything
             LD   C,kACIACont    ;Get base address of ACIA
@@ -142,7 +158,7 @@
 ;   On exit:  A = Character input from the device
 ;             NZ flagged if a character has been found
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@ACIA_RxA:
+.ACIA_RxA:
             IN   A,(kACIACont)  ;Address of status register
             BIT  0,A            ;Receive byte available
             RET  Z              ;Return Z if no character
@@ -157,7 +173,7 @@
 ;             If character output failed (eg. device busy)
 ;               Z flagged and A = Character to output
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@ACIA_TxA:
+.ACIA_TxA:
             PUSH BC
             LD   C,kACIACont    ;ACIA control register
             IN   B,(C)          ;Read ACIA control register
@@ -178,7 +194,7 @@
 ;               A != 0 and NZ flagged
 ;             BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
-@ACIA_Set:  XOR  A              ;Return failed to set (Z flagged)
+.ACIA_Set:  XOR  A              ;Return failed to set (Z flagged)
             RET
 
 

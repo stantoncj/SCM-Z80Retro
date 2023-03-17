@@ -6,226 +6,234 @@
 ; This BIOS uses the optional BIOS framework
 
 ; Bios constants - version number
-#DEFINE     BNAME "SCZ80"       ;Bios name
-kBiosID:    .EQU BI_SCZ80       ;Bios ID (use constant BI_xxxx)
-kBiosMajor: .EQU 1              ;Bios version: major
-kBiosMinor: .EQU 3              ;Bios version: minor
-kBiosRevis: .EQU 0              ;Bios version: revision
-;BiosTouch: .EQU 20220227       ;Last date this BIOS code touched
+	DEFINE+ BNAME "SCZ80" ;Bios name
+kBiosID    = BI_SCZ80       ;Bios ID (use constant BI_xxxx)
+kBiosMajor = 1              ;Bios version major
+kBiosMinor = 3              ;Bios version minor
+kBiosRevis = 0              ;Bios version revision
+;BiosTouch = 20220227       ;Last date this BIOS code touched
 
 ; Global constants - motherboard hardware
-;kPrtLED:   .EQU 0x08           ;Motherboard LED port (active low)
-;kRtsPrt:   .EQU 0x20           ;/RTS output is bit zero
-;kTxPrt:    .EQU 0x28           ;Transmit output is bit zero
-;kRxPrt:    .EQU 0x28           ;Receive input is bit 7
-;kBankPrt:  .EQU 0x30           ;Motherboard bank select port 
+;kPrtLED   = 0x08           ;Motherboard LED port (active low)
+;kRtsPrt   = 0x20           ;/RTS output is bit zero
+;kTxPrt    = 0x28           ;Transmit output is bit zero
+;kRxPrt    = 0x28           ;Receive input is bit 7
+;kBankPrt  = 0x30           ;Motherboard bank select port 
 
 ; Constants for additional hardware modules
-;kACIA1:    .EQU 0x80           ;Base address of serial ACIA #1
-;kACIA2:    .EQU 0xB0           ;Base address of serial ACIA #2
-;kSIO1:     .EQU 0x80           ;Base address of serial Z80 SIO #1
-;kSIO2:     .EQU 0x84           ;Base address of serial Z80 SIO #2
-;kCTC1:     .EQU 0x88           ;Base address of Z80 CTC #1
-;kCTC2:     .EQU 0x8C           ;Base address of Z80 CTC #2
+;kACIA1    = 0x80           ;Base address of serial ACIA #1
+;kACIA2    = 0xB0           ;Base address of serial ACIA #2
+;kSIO1     = 0x80           ;Base address of serial Z80 SIO #1
+;kSIO2     = 0x84           ;Base address of serial Z80 SIO #2
+;kCTC1     = 0x88           ;Base address of Z80 CTC #1
+;kCTC2     = 0x8C           ;Base address of Z80 CTC #2
 
 ; **********************************************************************
 ; **  Includes                                                        **
 ; **********************************************************************
 
 ; Include jump table at start of BIOS
-#INCLUDE    BIOS\BIOS_JumpTable.asm
+	INCLUDE BIOS/BIOS_JumpTable.asm
 
 ; Include common BIOS functions and API shims
-#INCLUDE    BIOS\BIOS_Common.asm
+	INCLUDE BIOS/BIOS_Common.asm
 
 ; Include framework (this is an optional approach to BIOS code)
-#INCLUDE    BIOS\Framework\Framework.asm
+	INCLUDE BIOS/Framework/Framework.asm
 
 ; Include any additional source files needed for this BIOS
-#INCLUDE    BIOS\Framework\Selftest.asm
+	INCLUDE BIOS/Framework/Selftest.asm
 
 ; Include BIOS framework interface devices...
 
 ; Banked RAM type SC1
-#IFDEF      INCLUDE_BankedRAM_SC1
-#INCLUDE    BIOS\Framework\Devices\BankedRAM_SC1.asm
-#ENDIF
+	IFDEF INCLUDE_BankedRAM_SC1
+	INCLUDE BIOS/Framework/Devices/BankedRAM_SC1.asm
+	ENDIF
 
 ; Banked RAM type SC2
-#IFDEF      INCLUDE_BankedRAM_SC2
-#INCLUDE    BIOS\Framework\Devices\BankedRAM_SC2.asm
-#ENDIF
+	IFDEF INCLUDE_BankedRAM_SC2
+	INCLUDE BIOS/Framework/Devices/BankedRAM_SC2.asm
+	ENDIF
 
 ; Banked ROM type SC1
-#IFDEF      INCLUDE_BankedROM_SC1
-#INCLUDE    BIOS\Framework\Devices\BankedROM_SC1.asm
-#ENDIF
+	IFDEF INCLUDE_BankedROM_SC1
+	INCLUDE BIOS/Framework/Devices/BankedROM_SC1.asm
+	ENDIF
 
 ; Bit-bang serial port type SC1
-#IFDEF      INCLUDE_BitBangSerial_SC1
-#INCLUDE    BIOS\Framework\Devices\BitBangSerial_SC1.asm
-#ENDIF
+	IFDEF INCLUDE_BitBangSerial_SC1
+	INCLUDE BIOS/Framework/Devices/BitBangSerial_SC1.asm
+	ENDIF
 
 ; SIO #1 following the RC2014 register order
-#IFDEF      INCLUDE_SIO_n1_rc
-kSIOBase:   .SET kSIO1          ;I/O base address
-kSIOACont:  .SET kSIOBase+0     ;I/O address of control register A
-kSIOAData:  .SET kSIOBase+1     ;I/O address of data register A
-kSIOBCont:  .SET kSIOBase+2     ;I/O address of control register B
-kSIOBData:  .SET kSIOBase+3     ;I/O address of data register B
-kSIOFlags:  .SET 0b00000010     ;Hardware flags = SIO #1
-kSIOACTC:   .SET kSIO1ACTC      ;I/O address of linked CTC port A
-kSIOBCTC:   .SET kSIO1BCTC      ;I/O address of linked CTC port A
+	IFDEF INCLUDE_SIO_n1_rc
+kSIOBase   = kSIO1          ;I/O base address
+kSIOACont  = kSIOBase+0     ;I/O address of control register A
+kSIOAData  = kSIOBase+1     ;I/O address of data register A
+kSIOBCont  = kSIOBase+2     ;I/O address of control register B
+kSIOBData  = kSIOBase+3     ;I/O address of data register B
+kSIOFlags  = 0b00000010     ;Hardware flags = SIO #1
+kSIOACTC   = kSIO1ACTC      ;I/O address of linked CTC port A
+kSIOBCTC   = kSIO1BCTC      ;I/O address of linked CTC port A
 SIO_n1_rc:
-#DEFINE     SIO_TYPE "(rc) "
-#INCLUDE    BIOS\Framework\Devices\SIO.asm
-#UNDEFINE   SIO_TYPE
-#ENDIF
+	DEFINE+ SIO_TYPE "(rc) "
+	INCLUDE BIOS/Framework/Devices/SIO.asm
+	UNDEFINE SIO_TYPE
+	ENDIF
 
 ; SIO #1 following the typical Zilog register order
-#IFDEF      INCLUDE_SIO_n1_std
-kSIOBase:   .SET kSIO1          ;I/O base address
-kSIOACont:  .SET kSIOBase+2     ;I/O address of control register A
-kSIOAData:  .SET kSIOBase+0     ;I/O address of data register A
-kSIOBCont:  .SET kSIOBase+3     ;I/O address of control register B
-kSIOBData:  .SET kSIOBase+1     ;I/O address of data register B
-kSIOFlags:  .SET 0b00000010     ;Hardware flags = SIO #1
-kSIOACTC:   .SET kSIO1ACTC      ;I/O address of linked CTC port A
-kSIOBCTC:   .SET kSIO1BCTC      ;I/O address of linked CTC port A
+	IFDEF INCLUDE_SIO_n1_std
+kSIOBase   = kSIO1          ;I/O base address
+kSIOACont  = kSIOBase+2     ;I/O address of control register A
+kSIOAData  = kSIOBase+0     ;I/O address of data register A
+kSIOBCont  = kSIOBase+3     ;I/O address of control register B
+kSIOBData  = kSIOBase+1     ;I/O address of data register B
+kSIOFlags  = 0b00000010     ;Hardware flags = SIO #1
+kSIOACTC   = kSIO1ACTC      ;I/O address of linked CTC port A
+kSIOBCTC   = kSIO1BCTC      ;I/O address of linked CTC port A
 SIO_n1_std:
-#DEFINE     SIO_TYPE ""         ;or "(std) "
-#INCLUDE    BIOS\Framework\Devices\SIO.asm
-#UNDEFINE   SIO_TYPE
-#ENDIF
+	DEFINE+ SIO_TYPE " " ;or "(std) "
+	INCLUDE BIOS/Framework/Devices/SIO.asm
+	UNDEFINE SIO_TYPE
+	ENDIF
 
 ; SIO #2 following the RC2014 register order
-#IFDEF      INCLUDE_SIO_n2_rc
-kSIOBase:   .SET kSIO2          ;I/O base address
-kSIOACont:  .SET kSIOBase+0     ;I/O address of control register A
-kSIOAData:  .SET kSIOBase+1     ;I/O address of data register A
-kSIOBCont:  .SET kSIOBase+2     ;I/O address of control register B
-kSIOBData:  .SET kSIOBase+3     ;I/O address of data register B
-kSIOFlags:  .SET 0b00100000     ;Hardware flags = SIO #2
-kSIOACTC:   .SET kSIO2ACTC      ;I/O address of linked CTC port A
-kSIOBCTC:   .SET kSIO2BCTC      ;I/O address of linked CTC port A
+	IFDEF INCLUDE_SIO_n2_rc
+kSIOBase   = kSIO2          ;I/O base address
+kSIOACont  = kSIOBase+0     ;I/O address of control register A
+kSIOAData  = kSIOBase+1     ;I/O address of data register A
+kSIOBCont  = kSIOBase+2     ;I/O address of control register B
+kSIOBData  = kSIOBase+3     ;I/O address of data register B
+kSIOFlags  = 0b00100000     ;Hardware flags = SIO #2
+kSIOACTC   = kSIO2ACTC      ;I/O address of linked CTC port A
+kSIOBCTC   = kSIO2BCTC      ;I/O address of linked CTC port A
 SIO_n2_rc:
-#DEFINE     SIO_TYPE "(rc) "
-#INCLUDE    BIOS\Framework\Devices\SIO.asm
-#UNDEFINE   SIO_TYPE
-#ENDIF
+	DEFINE+ SIO_TYPE "(rc) "
+	INCLUDE BIOS/Framework/Devices/SIO.asm
+	UNDEFINE SIO_TYPE
+	ENDIF
 
 ; SIO #2 follows the typical Zilog register order
-#IFDEF      INCLUDE_SIO_n2_std
-kSIOBase:   .SET kSIO2          ;I/O base address
-kSIOACont:  .SET kSIOBase+2     ;I/O address of control register A
-kSIOAData:  .SET kSIOBase+0     ;I/O address of data register A
-kSIOBCont:  .SET kSIOBase+3     ;I/O address of control register B
-kSIOBData:  .SET kSIOBase+1     ;I/O address of data register B
-kSIOFlags:  .SET 0b00100000     ;Hardware flags = SIO #2
-kSIOACTC:   .SET kSIO2ACTC      ;I/O address of linked CTC port A
-kSIOBCTC:   .SET kSIO2BCTC      ;I/O address of linked CTC port A
+	IFDEF INCLUDE_SIO_n2_std
+kSIOBase   = kSIO2          ;I/O base address
+kSIOACont  = kSIOBase+2     ;I/O address of control register A
+kSIOAData  = kSIOBase+0     ;I/O address of data register A
+kSIOBCont  = kSIOBase+3     ;I/O address of control register B
+kSIOBData  = kSIOBase+1     ;I/O address of data register B
+kSIOFlags  = 0b00100000     ;Hardware flags = SIO #2
+kSIOACTC   = kSIO2ACTC      ;I/O address of linked CTC port A
+kSIOBCTC   = kSIO2BCTC      ;I/O address of linked CTC port A
 SIO_n2_std:
-#DEFINE     SIO_TYPE ""         ;or "(std) "
-#INCLUDE    BIOS\Framework\Devices\SIO.asm
-#UNDEFINE   SIO_TYPE
-#ENDIF
+	DEFINE+ SIO_TYPE " " ;or "(std) "
+	INCLUDE BIOS/Framework/Devices/SIO.asm
+	UNDEFINE SIO_TYPE
+	ENDIF
 
 ; ACIA #1
-#IFDEF      INCLUDE_ACIA_n1
-kACIABase:  .SET kACIA1         ;I/O base address
-kACIACont:  .SET kACIABase+0    ;I/O address of control register
-kACIAData:  .SET kACIABase+1    ;I/O address of data register
-kACIAFlags: .SET 0b00000001     ;Hardware flags = ACIA #1
+	IFDEF INCLUDE_ACIA_n1
+kACIABase  = kACIA1         ;I/O base address
+kACIACont  = kACIABase+0    ;I/O address of control register
+kACIAData  = kACIABase+1    ;I/O address of data register
+kACIAFlags = 0b00000001     ;Hardware flags = ACIA #1
 ACIA_n1:
-#INCLUDE    BIOS\Framework\Devices\ACIA.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/ACIA.asm
+	ENDIF
 
 ; ACIA #2
-#IFDEF      INCLUDE_ACIA_n2
-kACIABase:  .SET kACIA2         ;I/O base address
-kACIACont:  .SET kACIABase+0    ;I/O address of control register
-kACIAData:  .SET kACIABase+1    ;I/O address of data register
-kACIAFlags: .SET 0b00000100     ;Hardware flags = ACIA #2
+	IFDEF INCLUDE_ACIA_n2
+kACIABase  = kACIA2         ;I/O base address
+kACIACont  = kACIABase+0    ;I/O address of control register
+kACIAData  = kACIABase+1    ;I/O address of data register
+kACIAFlags = 0b00000100     ;Hardware flags = ACIA #2
 ACIA_n2:
-#INCLUDE    BIOS\Framework\Devices\ACIA.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/ACIA.asm
+	ENDIF
 
 ; CTC #1
-#IFDEF      INCLUDE_CTC_n1
-kDevBase:   .SET kCTC1          ;I/O base address
-kDevFlags:  .SET 0b00010000     ;Hardware flags = CTC #1
-;kDevTick:  .SET 2              ;Channel (0 to 3) for 200Hz tick
+	IFDEF INCLUDE_CTC_n1
+kDevBase   = kCTC1          ;I/O base address
+kDevFlags  = 0b00010000     ;Hardware flags = CTC #1
+;kDevTick  = 2              ;Channel (0 to 3) for 200Hz tick
 CTC_n1:
-#INCLUDE    BIOS\Framework\Devices\CTC.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/CTC.asm
+	ENDIF
 
 ; CTC #2
-#IFDEF      INCLUDE_CTC_n2
-kDevBase:   .SET kCTC2          ;I/O base address
-kDevFlags:  .SET 0b01000000     ;Hardware flags = CTC #2
-;kDevTick:  .SET 2              ;Channel (0 to 3) for 200Hz tick
+	IFDEF INCLUDE_CTC_n2
+kDevBase   = kCTC2          ;I/O base address
+kDevFlags  = 0b01000000     ;Hardware flags = CTC #2
+;kDevTick  = 2              ;Channel (0 to 3) for 200Hz tick
 CTC_n2:
-#INCLUDE    BIOS\Framework\Devices\CTC.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/CTC.asm
+	ENDIF
 
 ; SCC #1
-#IFDEF      INCLUDE_SCC_n1
-kSCCBase:   .SET kSCC1          ;I/O base address
-kSCCBCont:  .SET kSCCBase+0     ;I/O address of control register B
-kSCCACont:  .SET kSCCBase+1     ;I/O address of control register A
-kSCCBData:  .SET kSCCBase+2     ;I/O address of data register B
-kSCCAData:  .SET kSCCBase+3     ;I/O address of data register A
-kSCCFlags:  .SET 0b00000000     ;Hardware flags = SCC #1
+	IFDEF INCLUDE_SCC_n1
+kSCCBase   = kSCC1          ;I/O base address
+kSCCBCont  = kSCCBase+0     ;I/O address of control register B
+kSCCACont  = kSCCBase+1     ;I/O address of control register A
+kSCCBData  = kSCCBase+2     ;I/O address of data register B
+kSCCAData  = kSCCBase+3     ;I/O address of data register A
+kSCCFlags  = 0b00000000     ;Hardware flags = SCC #1
 SCC_n1:
-#INCLUDE    BIOS\Framework\Devices\SCC.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/SCC.asm
+	ENDIF
 
 ; SCC #2
-#IFDEF      INCLUDE_SCC_n2
-kSCCBase:   .SET kSCC2          ;I/O base address
-kSCCBCont:  .SET kSCCBase+0     ;I/O address of control register B
-kSCCACont:  .SET kSCCBase+1     ;I/O address of control register A
-kSCCBData:  .SET kSCCBase+2     ;I/O address of data register B
-kSCCAData:  .SET kSCCBase+3     ;I/O address of data register A
-kSCCFlags:  .SET 0b00000000     ;Hardware flags = SCC #2
+	IFDEF INCLUDE_SCC_n2
+kSCCBase   = kSCC2          ;I/O base address
+kSCCBCont  = kSCCBase+0     ;I/O address of control register B
+kSCCACont  = kSCCBase+1     ;I/O address of control register A
+kSCCBData  = kSCCBase+2     ;I/O address of data register B
+kSCCAData  = kSCCBase+3     ;I/O address of data register A
+kSCCFlags  = 0b00000000     ;Hardware flags = SCC #2
 SCC_n2:
-#INCLUDE    BIOS\Framework\Devices\SCC.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/SCC.asm
+	ENDIF
 
 ; Compact flash interface (8-bit IDE direct on bus)
-#IFDEF      INCLUDE_CFCard
-kCFBase:    .SET kCFCard        ;I/O base address
+	IFDEF INCLUDE_CFCard
+kCFBase    = kCFCard        ;I/O base address
 CFCard:
-#INCLUDE    BIOS\Framework\Devices\CFCard.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/CFCard.asm
+	ENDIF
 
 ; Diagnostic LEDs (digital output port with 8 LEDs)
-#IFDEF      INCLUDE_DiagLEDs
-kDiagBase:  .EQU kDiagLEDs      ;I/O base address
+	IFDEF INCLUDE_DiagLEDs
+kDiagBase  = kDiagLEDs      ;I/O base address
 DiagLEDs:
-#INCLUDE    BIOS\Framework\Devices\DiagLEDs.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/DiagLEDs.asm
+	ENDIF
 
 ; Status LED (single LED)
-#IFDEF      INCLUDE_StatusLED
-kStatBase:  .EQU kPrtLED        ;I/O base address
+	IFDEF INCLUDE_StatusLED
+kStatBase  = kPrtLED        ;I/O base address
 StatusLED:
-#INCLUDE    BIOS\Framework\Devices\StatusLED.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/StatusLED.asm
+	ENDIF
 
 ; LCD 16x2
-#IFDEF      INCLUDE_LCD16x2
-kL16x2Base: .SET 0x68           ;I/O base address
-kL16x2Flags:                    .SET 0b00000000 ;Hardware flags = SCC #2
+	IFDEF INCLUDE_LCD16x2
+kL16x2Base = 0x68           ;I/O base address
+kL16x2Flags                    = 0b00000000 ;Hardware flags = SCC #2
 LCD16x2:
-#INCLUDE    BIOS\Framework\Devices\LCD16x2.asm
-#ENDIF
+	INCLUDE BIOS/Framework/Devices/LCD16x2.asm
+	ENDIF
 
 
 ; **********************************************************************
 ; Ensure we assemble to code area
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; **********************************************************************
 ; Self-test
@@ -257,17 +265,17 @@ H_Init:     CALL F_Init         ;Use framework
             LD   HL,kaBaud1Def  ;Start of baud rates table in ROM
             LD   C,1            ;Console device (1 to 4)
             LD   B,4            ;Number of console devices
-@Loop:      LD   A,(HL)         ;Baud rate code
+.Loop:      LD   A,(HL)         ;Baud rate code
             OR   A              ;Is baud rate specified?
-            JR   Z,@Next        ;No, so skip
+            JR   Z,.Next        ;No, so skip
             PUSH BC
             PUSH HL
             CALL F_SetBaud      ;Use framework to set baud rate
             POP  HL
             POP  BC
-@Next:      INC  C              ;Increment console device number
+.Next:      INC  C              ;Increment console device number
             INC  HL             ;Increment table pointer
-            DJNZ @Loop
+            DJNZ .Loop
             RET
 
 ; The BIOS framework requires a list of supported devices
@@ -276,51 +284,51 @@ H_Init:     CALL F_Init         ;Use framework
 ;          Therefore the SIO devices are listed first
 ;          SCC (85C50) also requires port A to be odd number
 Interfaces:
-#IFDEF      INCLUDE_SIO_n1_rc
+	IFDEF INCLUDE_SIO_n1_rc
             .DW  SIO_n1_rc
-#ENDIF
-#IFDEF      INCLUDE_SIO_n1_std
+	ENDIF
+	IFDEF INCLUDE_SIO_n1_std
             .DW  SIO_n1_std
-#ENDIF
-#IFDEF      INCLUDE_SIO_n2_rc
+	ENDIF
+	IFDEF INCLUDE_SIO_n2_rc
             .DW  SIO_n2_rc
-#ENDIF
-#IFDEF      INCLUDE_SIO_n2_std
+	ENDIF
+	IFDEF INCLUDE_SIO_n2_std
             .DW  SIO_n2_std
-#ENDIF
-#IFDEF      INCLUDE_SCC_n1
+	ENDIF
+	IFDEF INCLUDE_SCC_n1
             .DW  SCC_n1
-#ENDIF
-#IFDEF      INCLUDE_SCC_n2
+	ENDIF
+	IFDEF INCLUDE_SCC_n2
             .DW  SCC_n2
-#ENDIF
-#IFDEF      INCLUDE_CTC_n1
+	ENDIF
+	IFDEF INCLUDE_CTC_n1
             .DW  CTC_n1
-#ENDIF
-#IFDEF      INCLUDE_CTC_n2
+	ENDIF
+	IFDEF INCLUDE_CTC_n2
             .DW  CTC_n2
-#ENDIF
-#IFDEF      INCLUDE_ACIA_n1
+	ENDIF
+	IFDEF INCLUDE_ACIA_n1
             .DW  ACIA_n1
-#ENDIF
-#IFDEF      INCLUDE_ACIA_n2
+	ENDIF
+	IFDEF INCLUDE_ACIA_n2
             .DW  ACIA_n2
-#ENDIF
-#IFDEF      INCLUDE_BitBangSerial_SC1
+	ENDIF
+	IFDEF INCLUDE_BitBangSerial_SC1
             .DW  BitBangSerial_SC1
-#ENDIF
-#IFDEF      INCLUDE_CFCard
+	ENDIF
+	IFDEF INCLUDE_CFCard
             .DW  CFCard
-#ENDIF
-#IFDEF      INCLUDE_DiagLEDs
+	ENDIF
+	IFDEF INCLUDE_DiagLEDs
             .DW  DiagLEDs
-#ENDIF
-#IFDEF      INCLUDE_StatusLED
+	ENDIF
+	IFDEF INCLUDE_StatusLED
             .DW  StatusLED
-#ENDIF
-#IFDEF      INCLUDE_LCD16x2
+	ENDIF
+	IFDEF INCLUDE_LCD16x2
             .DW  LCD16x2
-#ENDIF
+	ENDIF
             .DW  0              ;End of list
 
 
@@ -352,19 +360,19 @@ H_SetBaud:  JP   F_SetBaud      ;Use framework
 ;                 2 = Hardware generated timer events
 ;   On exit:  AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
-H_IdleSet:  LD   HL,@Vector     ;Point to idle mode 0 vector
+H_IdleSet:  LD   HL,.Vector     ;Point to idle mode 0 vector
             OR   A              ;A=0?
-            JR   Z,@IdleSet     ;Yes, so skip
+            JR   Z,.IdleSet     ;Yes, so skip
             INC  HL             ;Point to idle mode 1 vector
             INC  HL
 ; Set up event handler by writing to jump table
-@IdleSet:   LD   A,kFnIdle      ;Jump table 0x0C = idle handler
+.IdleSet:   LD   A,kFnIdle      ;Jump table 0x0C = idle handler
             JP   InitJump       ;Write jump table entry A
 ; Idle events off handler 
-@Return:    XOR  A              ;Return no event (A=0 and Z flagged)
+.Return:    XOR  A              ;Return no event (A=0 and Z flagged)
             RET                 ;Idle mode zero routine
 ; Vector for event handler
-@Vector:    .DW  @Return        ;Mode 0 = Off
+.Vector:    .DW  .Return        ;Mode 0 = Off
             .DW  H_PollT2       ;Mode 1 = Hardware, no software version
 
 H_PollT2:   RET
@@ -431,7 +439,15 @@ H_MsgDevs:  JP   F_MsgDevs      ;Use framework
 ; **  Public workspace (in RAM)                                       **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 ; None!
 

@@ -2,38 +2,142 @@
 ; **  ROM info: SC32k                           by Stephen C Cousins  **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
-            .ORG 0x3000         ;Inserted files start here
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("0x3000")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("0x3000")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 ; Executable: BASIC.COM
 BasicCode:
-#INSERTHEX  ..\Apps\MSBASIC_adapted_by_GSearle\SCMon_BASIC_code3000_data8000.hex
+
+; #INSERTHEX from file
+	LUA ALLPASS
+		f = io.open("../Apps/MSBASIC_adapted_by_GSearle/SCMon_BASIC_code3000_data8000.hex")
+		if (f~=nil) then
+			local line=f:read()
+			while line do
+				if(string.len(line)>13) then
+					_pc(string.format(".DH %s",string.sub(line,10,-4)))
+				end
+				line=f:read()
+				end
+		else
+			sj.warning("Could not locate file ../Apps/MSBASIC_adapted_by_GSearle/SCMon_BASIC_code3000_data8000.hex")
+		end
+		io.close(f)
+	ENDLUA
+
 BasicCodeEnd:
-BasicCodeW: .EQU BasicCode+3    ;Warm start entry 
+BasicCodeW = BasicCode+3    ;Warm start entry 
 
 ; Executable: CPM.COM
-#IFNDEF     CFBASE1
-#DEFINE     CFBASE1 "0x10"
-#ENDIF
-#IF         PROCESSOR = "Z80"
+	IFNDEF CFBASE1
+	DEFINE+ CFBASE1 "0x10"
+	ENDIF
+	IF PROCESSOR = "Z80""
 CPMCode:
-#IF         CFBASE1 = "0x10"
-#INSERTHEX  ..\Apps\CPM_load_from_compact_flash\SCMon_CPM_loader_Z80_0x10_code8000.hex
-#ENDIF
-#IF         CFBASE1 = "0x90"
-#INSERTHEX  ..\Apps\CPM_load_from_compact_flash\SCMon_CPM_loader_Z80_0x90_code8000.hex
-#ENDIF
-#ENDIF
-#IF         PROCESSOR = "Z180"
+	IF CFBASE1 = "0x10"
+
+; #INSERTHEX from file
+	LUA ALLPASS
+		f = io.open("../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z80_0x10_code8000.hex")
+		if (f~=nil) then
+			local line=f:read()
+			while line do
+				if(string.len(line)>13) then
+					_pc(string.format(".DH %s",string.sub(line,10,-4)))
+				end
+				line=f:read()
+				end
+		else
+			sj.warning("Could not locate file ../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z80_0x10_code8000.hex")
+		end
+		io.close(f)
+	ENDLUA
+
+	ENDIF
+	IF CFBASE1 = "0x90"
+
+; #INSERTHEX from file
+	LUA ALLPASS
+		f = io.open("../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z80_0x90_code8000.hex")
+		if (f~=nil) then
+			local line=f:read()
+			while line do
+				if(string.len(line)>13) then
+					_pc(string.format(".DH %s",string.sub(line,10,-4)))
+				end
+				line=f:read()
+				end
+		else
+			sj.warning("Could not locate file ../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z80_0x90_code8000.hex")
+		end
+		io.close(f)
+	ENDLUA
+
+	ENDIF
+	ENDIF
+	IF PROCESSOR = "Z180"
 CPMCode:
-#IF         CFBASE1 = "0x10"
-#INSERTHEX  ..\Apps\CPM_load_from_compact_flash\SCMon_CPM_loader_Z180xC0_0x10_code8000.hex
-#ENDIF
-#IF         CFBASE1 = "0x90"
-#INSERTHEX  ..\Apps\CPM_load_from_compact_flash\SCMon_CPM_loader_Z180xC0_0x90_code8000.hex
-#ENDIF
-#ENDIF
+	IF CFBASE1 = "0x10"
+
+; #INSERTHEX from file
+	LUA ALLPASS
+		f = io.open("../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z180xC0_0x10_code8000.hex")
+		if (f~=nil) then
+			local line=f:read()
+			while line do
+				if(string.len(line)>13) then
+					_pc(string.format(".DH %s",string.sub(line,10,-4)))
+				end
+				line=f:read()
+				end
+		else
+			sj.warning("Could not locate file ../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z180xC0_0x10_code8000.hex")
+		end
+		io.close(f)
+	ENDLUA
+
+	ENDIF
+	IF CFBASE1 = "0x90"
+
+; #INSERTHEX from file
+	LUA ALLPASS
+		f = io.open("../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z180xC0_0x90_code8000.hex")
+		if (f~=nil) then
+			local line=f:read()
+			while line do
+				if(string.len(line)>13) then
+					_pc(string.format(".DH %s",string.sub(line,10,-4)))
+				end
+				line=f:read()
+				end
+		else
+			sj.warning("Could not locate file ../Apps/CPM_load_from_compact_flash/SCMon_CPM_loader_Z180xC0_0x90_code8000.hex")
+		end
+		io.close(f)
+	ENDLUA
+
+	ENDIF
+	ENDIF
 CPMCodeEnd:
 
 ; Help extension: BASIC.HLP
@@ -49,7 +153,18 @@ CPMHelp:    .DB  "CPM      Load CP/M from Compact Flash (requires prepared CF ca
 CPMHelpEnd:
 
 
-            .ORG 0x7FA0         ;File references downwards from 0x7FF0 
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("0x7FA0")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("0x7FA0")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
             .DW  0xAA55         ;Identifier
             .DB  "CPM     "     ;File name ("CPM.HLP")
@@ -86,7 +201,7 @@ CPMHelpEnd:
             .DW  BasicCode      ;Start address
             .DW  BasicCodeEnd-BasicCode ;Length
 
-#INCLUDE    Monitor\MonitorInfo.asm
+	INCLUDE Monitor/MonitorInfo.asm
 ; Include Monitor.EXE information at top of bank 1. eg:
 ;           .ORG 0x1FF0         ;First ROMFS file in 8k bank
 ;           .DW  0xAA55         ;Identifier

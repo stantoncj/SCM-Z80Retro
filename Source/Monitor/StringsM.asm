@@ -13,7 +13,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; String: Append specified zero (null) terminated string
 ;   On entry: DE = Start of string to be appended
@@ -24,13 +32,13 @@
 StrAppendZ:
             PUSH AF
             PUSH DE
-@Next:      LD   A,(DE)         ;Get length of specified string
+.Next:      LD   A,(DE)         ;Get length of specified string
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done
+            JR   Z,.Done        ;Yes, so we're done
             CALL StrWrChar      ;Write character to current string
             INC  DE             ;Point to next character
-            JR   @Next          ;Loop back if more character
-@Done:      POP  DE
+            JR   .Next          ;Loop back if more character
+.Done:      POP  DE
             POP  AF
             RET
 
@@ -44,16 +52,16 @@ StrConvUpper:
             LD   HL,(iStrStart) ;Get start of current string buffer
             LD   A,(HL)         ;Get length of string
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done here
+            JR   Z,.Done        ;Yes, so we're done here
             PUSH BC
             LD   B,A            ;Store length of string
-@Loop:      INC  HL             ;Point to next character in string
+.Loop:      INC  HL             ;Point to next character in string
             LD   A,(HL)         ;Get character from string
             CALL ConvertCharToUCase
             LD   (HL),A         ;Write upper case char to string
-            DJNZ @Loop          ;Loop until end of string
+            DJNZ .Loop          ;Loop until end of string
             POP  BC
-@Done:      POP  HL
+.Done:      POP  HL
             POP  AF
             RET
 
@@ -77,9 +85,9 @@ StrWrHexNibble:
             PUSH AF
             AND  0x0F           ;Mask off nibble
             CP   0x0A           ;Nibble > 10 ?
-            JR   C,@Skip        ;No, so skip
+            JR   C,.Skip        ;No, so skip
             ADD  A,7            ;Yes, so add 7
-@Skip:      ADD  A,0x30         ;Add ASCII '0'
+.Skip:      ADD  A,0x30         ;Add ASCII '0'
             CALL StrWrChar      ;Write character
             POP  AF
             RET

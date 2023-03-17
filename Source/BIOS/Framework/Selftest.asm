@@ -13,33 +13,41 @@
 ;
 
 ; Must be defined externally, eg:
-;kPrtOut:   .EQU 0              ;Assume digital status port is present
-;kPrtLED:   .EQU 0x08           ;Motherboard LED (active low)
+;kPrtOut   = 0              ;Assume digital status port is present
+;kPrtLED   = 0x08           ;Motherboard LED (active low)
 
 ; RAM test
 ; Determine hi byte of first address to not be tested
 ; Code assumes last RAM address is 0x##FF
-SlfTstEnd1: .EQU HIGH kEndOfData 
-SlfTstEnd2: .EQU SlfTstEnd1 + 1
-SlfTstEnd:  .EQU SlfTstEnd2 & 0xFF
+SlfTstEnd1 = HIGH kEndOfData 
+SlfTstEnd2 = SlfTstEnd1 + 1
+SlfTstEnd  = SlfTstEnd2 & 0xFF
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Initialially we assume that there is no RAM so we avoid subroutines.
 
 H_Test:     DI
 
-#IF         PROCESSOR = "Z180"
+	IF PROCESSOR = "Z180"
 
 ; Initialise Z180's internal register mapping
-#IFNDEF     EXTERNALOS          ;Uses external settings
+	IFNDEF EXTERNALOS ;Uses external settings
             LD   A, kZ180       ;Start of Z180 internal I/O
             OUT0 (0x3F), A      ;Address ICR = 0x3F before relocation
-#ENDIF
+	ENDIF
 
 ; Initialise Memory Management Unit (MMU)
 ;
@@ -82,44 +90,44 @@ H_Test:     DI
 ;    BBR  = (physical address)/0x1000 - BA = 0x00 - 0x0 = 0x00
 ;    CBR  = (physical address)/0x1000 - BA = 0x88 - 0x8 = 0x80
 ;#IFNDEF    EXTERNALOS          ;Uses external settings
-#IFNDEF     DO_NOT_REMAP_MEMORY ;Leave memory map unchanged
+	IFNDEF DO_NOT_REMAP_MEMORY ;Leave memory map unchanged
             LD   A, 0x00        ;Physical memory base address:
             OUT0 (BBR), A       ;  Bank Base   = 0x00000 to 0x07FFF
             LD   A, 0x80        ;Physical memory base address:
             OUT0 (CBR), A       ;  Common Base = 0x88000 to 0x8FFFF
 ;           LD   A, 0x80        ;Logical memory base addresses:
             OUT0 (CBAR), A      ;  Bank = 0x0000, Common = 0x8000
-#ENDIF
+	ENDIF
 
-#ENDIF
+	ENDIF
 
 ; Special for SC114 style status LED
-#IFDEF      INCLUDE_StatusLED
+	IFDEF INCLUDE_StatusLED
             LD   A,1
             OUT  (kPrtLED),A    ;Turn off motherboard/status LED
-#ENDIF
+	ENDIF
 
 ; Flash LEDs in turn to show we get as far as running code
-@Selftest:  LD   DE,1           ;Prepared for delay loop
+.Selftest:  LD   DE,1           ;Prepared for delay loop
             LD   A,E            ;First byte to write to LEDs = 0x01
-@Loop1:     OUT  (kPrtOut),A    ;Write to LEDs
+.Loop1:     OUT  (kPrtOut),A    ;Write to LEDs
             ;LD   HL,0xE1C0     ;Set delay time (approx 8000 loops)
-#IF         PROCESSOR = "Z180"
+	IF PROCESSOR = "Z180"
 ; Z180 assumed to have a 18.432MHz clock but currently it has maximum
 ; wait states added and internal clock divide by 2 so running slowly!
             LD   HL,55000       ;Set delay time (approx 10000 loops)
-#ELSE
+	ELSE
 ; Z80 assumed to have a 7.3728MHz clock
             LD   HL,50000       ;Set delay time (approx 15000 loops)
-#ENDIF
-@Delay1:    ADD  HL,DE          ;Delay loop increments HL until
-            JR   NC,@Delay1     ;  it reaches zero
+	ENDIF
+.Delay1:    ADD  HL,DE          ;Delay loop increments HL until
+            JR   NC,.Delay1     ;  it reaches zero
             RLCA                ;Rotate LED bit left
-            JR   NC,@Loop1      ;Repeat until last LED cleared
+            JR   NC,.Loop1      ;Repeat until last LED cleared
             XOR  A              ;Clear A
             OUT  (kPrtOut),A    ;All LEDs off
 
-#IFDEF      NOCHANCE
+	IFDEF NOCHANCE
 
 ; Very brief RAM test
 ; This is the original RAM test from SCM v1.0 to v1.2
@@ -132,11 +140,11 @@ H_Test:     DI
             INC  HL             ;HL = 0xFFFF
             CPL                 ;Invert bits to 01010101
             CP   (HL)           ;Test 01010101 at 0xFFFF
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             DEC  HL             ;HL = 0xFFFE
             CPL                 ;Invert bits to 10101010
             CP   (HL)           ;Test 10101010 at 0xFFFE
-            JR   NZ,@Selftest   ;Failed so restart
+            JR   NZ,.Selftest   ;Failed so restart
 ; Repeat with all tests inverted
             CPL                 ;Invert bits to 01010101
             LD   (HL),A         ;Store 01010101 at 0xFFFE
@@ -146,13 +154,13 @@ H_Test:     DI
             DEC  HL             ;HL = 0xFFFE
             CPL                 ;Invert bits to 01010101
             CP   (HL)           ;Test 01010101 at 0xFFFE
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             INC  HL             ;HL = 0xFFFF
             CPL                 ;Invert bits to 10101010
             CP   (HL)           ;Test 10101010 at 0xFFFF
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
 
-#ELSE
+	ELSE
 
 ; More advanced RAM test
 ; Test all RAM required for SCM to work properly
@@ -160,56 +168,56 @@ H_Test:     DI
             LD   D,SlfTstEnd    ;Hi byte of last test address
 ; Test for data errors
             LD   HL, kData      ;Start of RAM to be tested
-@TstData:   LD   A,0x00         ;Test data byte
+.TstData:   LD   A,0x00         ;Test data byte
             LD   (HL),A         ;Write to RAM
             CP   (HL)           ;Read back and test it
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             LD   A,0xFF         ;Test data byte
             LD   (HL),A         ;Write to RAM
             CP   (HL)           ;Read back and test it
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             LD   A,0xAA         ;Test data byte
             LD   (HL),A         ;Write to RAM
             CP   (HL)           ;Read back and test it
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             LD   A,0x55         ;Test data byte
             LD   (HL),A         ;Write to RAM
             CP   (HL)           ;Read back and test it
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             INC  HL             ;Point to next address
             LD   A,H            ;Get address hi byte
             CP   D              ;End of test range?
-            JR   NZ,@TstData    ;No, so repeat
+            JR   NZ,.TstData    ;No, so repeat
 ; Test for address errors
             LD   HL, kData      ;Start of RAM to be tested
-@TstAddWr:  LD   A,H            ;Generate test data byte
+.TstAddWr:  LD   A,H            ;Generate test data byte
             ADD  L              ;  based on address
             LD   (HL),A         ;Write to RAM
             INC  HL             ;Point to next address
             LD   A,H            ;Get address hi byte
             CP   D              ;End of test range?
-            JR   NZ,@TstAddWr   ;No, so repeat
+            JR   NZ,.TstAddWr   ;No, so repeat
             LD   HL, kData      ;Start of RAM to be tested
-@TstAddRd:  LD   A,H            ;Generate test data byte
+.TstAddRd:  LD   A,H            ;Generate test data byte
             ADD  L              ;  based on address
             CP   (HL)           ;Compare with byte from RAM
-            JR   NZ,@Selftest   ;Failed, so restart
+            JR   NZ,.Selftest   ;Failed, so restart
             INC  HL             ;Point to next address
             LD   A,H            ;Get address hi byte
             CP   D              ;End of test range?
-            JR   NZ,@TstAddRd   ;No, so repeat
+            JR   NZ,.TstAddRd   ;No, so repeat
 
-#ENDIF
+	ENDIF
 
 ;SelftestEnd:
             XOR  A
             OUT  (kPrtOut),A    ;All LEDs off
 
 ; Special for SC114 style status LED
-#IFDEF      INCLUDE_StatusLED
+	IFDEF INCLUDE_StatusLED
             ;XOR  A
             OUT  (kPrtLED),A    ;Turn off motherboard/status LED
-#ENDIF
+	ENDIF
 
             JP   CStrt          ;Cold start system
 

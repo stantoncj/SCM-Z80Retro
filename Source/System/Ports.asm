@@ -21,7 +21,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Ports: Initialise output port
 ;   On entry: A = Output port address
@@ -130,7 +138,7 @@ PrtITst:    CALL PortMask       ;Get bit mask for bit A
 ;   On exit:  B = Bit mask
 ;             A = Current output port value
 ;             DE IX IY I AF' BC' DE' HL' preserved
-PortMask:   LD   HL,@MaskTab    ;Start of bit mask table
+PortMask:   LD   HL,.MaskTab    ;Start of bit mask table
             LD   C,A            ;Get bit number
             LD   B,0            ;Clear B
             ADD  HL,BC          ;Calculate location of bit mask in table
@@ -138,14 +146,22 @@ PortMask:   LD   HL,@MaskTab    ;Start of bit mask table
             LD   A,(iPrtOutD)   ;Get output data
             RET
 ; Bit mask table: bit 0 mask, bit 1 mask, ...
-@MaskTab:   .DB  1,2,4,8,16,32,64,128
+.MaskTab:   .DB  1,2,4,8,16,32,64,128
 
 
 ; **********************************************************************
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iPrtInA:    .DB  0              ;Input port address
 iPrtOutA:   .DB  0              ;Output port address

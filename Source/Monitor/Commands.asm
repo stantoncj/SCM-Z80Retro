@@ -18,48 +18,56 @@
 ; **********************************************************************
 
 ; Prompt character
-kPrompt:    .EQU '*'            ;Prompt character
+kPrompt    = '*'            ;Prompt character
 
 ; Error reporting flags
-kReportBad: .EQU 1              ;Report bad hex parameter
-kReportMis: .EQU 2              ;Report missing parameter
-kReportAny: .EQU 3              ;Report any error
+kReportBad = 1              ;Report bad hex parameter
+kReportMis = 2              ;Report missing parameter
+kReportAny = 3              ;Report any error
 
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Command Line Interpreter: Main loop
 CLILoop:    CALL StrInitDefault ;Initialise default string buffer
             LD   A,kPrompt      ;Get prompt character
             CALL OutputChar     ;Output a prompt character
-#IFDEF      IncludeMiniTerm
+	IFDEF IncludeMiniTerm
             XOR  A              ;Flag command as
             LD   (iMiniTerm),A  ;  not from mini terminal
-#ENDIF
-#IFDEF      IncludeHexLoader
+	ENDIF
+	IFDEF IncludeHexLoader
 ; Trap colon character and input intel hex record(s)
-@Preview:   CALL InputPreview   ;Preview first character in line
+.Preview:   CALL InputPreview   ;Preview first character in line
             CP   kColon         ;Start of Intel Hex record/line?
-            JR   NZ,@NotHex     ;No, so skip..
+            JR   NZ,.NotHex     ;No, so skip..
             CALL HexLoad        ;Load Intel Hex record
             CALL InputInsert    ;Insert returned character as waiting
-            JR   @Preview       ;Go preview start of next line..
-@NotHex:
-#IFDEF      IncludeMiniTerm
+            JR   .Preview       ;Go preview start of next line..
+.NotHex:
+	IFDEF IncludeMiniTerm
 ; WARNING this should be outside IncludeHexLoader
             CP   '-'
-            JR   NZ,@NotMini
+            JR   NZ,.NotMini
             LD   (iMiniTerm),A
             XOR   A
             CALL InputInsert    ;Insert returned character as waiting
-            JR   @Preview       ;Go preview start of next line..
-@NotMini:
-#ENDIF
-#ENDIF
+            JR   .Preview       ;Go preview start of next line..
+.NotMini:
+	ENDIF
+	ENDIF
 ; Input line and execute it
             CALL InputLine      ;Input a text line
             CALL CLIExecute     ;Execute command line
@@ -77,42 +85,42 @@ CLILoop:    CALL StrInitDefault ;Initialise default string buffer
 ; start of parameter string when command code entered.
 CLIExecute:
             ;EI
-@Leading:   LD   A,(DE)         ;Skip leading spaces...
+.Leading:   LD   A,(DE)         ;Skip leading spaces...
             CP   kSpace         ;Space character?
-            JR   NZ,@NotSpace   ;No, so continue to next char
+            JR   NZ,.NotSpace   ;No, so continue to next char
             INC  DE             ;Increment string pointer
-            JR   @Leading       ;Go consider next character
-@NotSpace:  CP   kNull          ;Blank line?
+            JR   .Leading       ;Go consider next character
+.NotSpace:  CP   kNull          ;Blank line?
             RET  Z              ;Yes, so exit with A=0x00 and Z flagged
 ; Optionally include scripting
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
 ; Scripting lines start with a numeric character
             CALL IsCharNumeric  ;Numeric character
-            JR   NC,@NotNum     ;No, so skip..
+            JR   NC,.NotNum     ;No, so skip..
             CALL CLIGetHexParam
             CALL ScrEdit        ;Send line to scripting editor
-            JR   @Return
-@NotNum:
-#ENDIF
+            JR   .Return
+.NotNum:
+	ENDIF
 ; Offer command string to system command line interpreter
 ; DE = Start of command string
             LD   HL,CmdNameList
             LD   BC,CmdAddressList
             CALL SearchStringList
-;           JR   Z,@Error       ;Not found so return error
-            JR   Z,@NotFound    ;Not found so try single letter
+;           JR   Z,.Error       ;Not found so return error
+            JR   Z,.NotFound    ;Not found so try single letter
 ; Execute command
-            LD   BC,@Return     ;Get return address
+            LD   BC,.Return     ;Get return address
             PUSH BC             ;Push return address onto stack
             JP   (HL)           ;Execute address from table
-@NotFound
+.NotFound
 ; Try looking for command in ROM filing system
-#IFDEF      IncludeRomFS
+	IFDEF IncludeRomFS
             PUSH DE
             CALL RomExFile      ;Execute ROM file named at DE
             POP  DE
             RET  Z              ;Exit if command executed
-#ENDIF
+	ENDIF
 ; Try inserting space after first character in command string
 ; to allow single letter commands to be entered without space
 ; DE = Start of command string
@@ -120,26 +128,26 @@ CLIExecute:
             LD   L,E
             INC  HL             ;Skip first character in string
             LD   C,kSpace       ;Insert space
-@Shift:     LD   A,(HL)         ;Get current character
+.Shift:     LD   A,(HL)         ;Get current character
             LD   (HL),C         ;Write new character
             LD   C,A            ;Store previous character
             LD   A,(HL)         ;Get character just written
             INC  HL             ;Point to next character
             OR   A              ;Null terminator?
-            JR   NZ,@Shift      ;No, so repeat
+            JR   NZ,.Shift      ;No, so repeat
             LD   HL,CmdNameList
             LD   BC,CmdAddressList
             CALL SearchStringList
-            JR   Z,@Error       ;Not found so return error
+            JR   Z,.Error       ;Not found so return error
 ; Execute single letter command
-            LD   BC,@Return     ;Get return address
+            LD   BC,.Return     ;Get return address
             PUSH BC             ;Push return address onto stack
             JP   (HL)           ;Execute address from table
 ; Return here after executing the command
-@Return:    XOR  A              ;Return A = 0x00 and Z flagged
+.Return:    XOR  A              ;Return A = 0x00 and Z flagged
             RET
 ; Bad command
-@Error:     LD   A,kMsgBadCmd   ;Message = Bad command
+.Error:     LD   A,kMsgBadCmd   ;Message = Bad command
             CALL OutputMessage  ;Output message
             LD   A,0xFF         ;No match found, so return:
             OR   A              ;  A = 0xFF and NZ flagged
@@ -155,13 +163,13 @@ CLIExecute:
 ; Input line must be null terminated
 ; The return address can be that of the null terminator
 CLISkipNonDeli:
-@Loop:      LD   A,(DE)         ;Get character from input line
+.Loop:      LD   A,(DE)         ;Get character from input line
             OR   A              ;End of line (null)?
             RET  Z              ;Yes, so exit
             CP   kSpace+1       ;Character > space?
             RET   C             ;No, so exit
             INC  DE             ;No, so non-delimiter
-            JR   @Loop          ;  and go try next character
+            JR   .Loop          ;  and go try next character
 
 
 ; Skip deliminaters in input line
@@ -177,13 +185,13 @@ CLISkipNonDeli:
 ; Input line must be null terminated
 ; The return address can be that of the null terminator
 CLISkipDelim:
-@Loop:      LD   A,(DE)         ;Get character from input line
+.Loop:      LD   A,(DE)         ;Get character from input line
             OR   A              ;End of line (null)?
             RET  Z              ;Yes, so exit
             CP   kSpace+1       ;Character > space?
             RET  NC             ;Yes, so exit
             INC  DE             ;No, so skip delimiter
-            JR   @Loop          ;  and go try next character
+            JR   .Loop          ;  and go try next character
 
 
 ; Get hex word/byte from input line
@@ -220,18 +228,18 @@ CLIGetHexParam:
             LD   C,A            ;Store error report flags
             CALL CLISkipDelim   ;Skip deliminater
             OR   A              ;End of line (null)? This clears carry flag
-            JR   Z,@None        ;Yes, so exit as no parameter found
+            JR   Z,.None        ;Yes, so exit as no parameter found
             CALL IsCharHex      ;Is first character hexadecimal ?
-            JR   NC,@Other      ;No, so invalid hex character
+            JR   NC,.Other      ;No, so invalid hex character
             LD   HL,0           ;Clear result (from supplied default)
-@Loop:      LD   A,(DE)         ;Get character from input line
+.Loop:      LD   A,(DE)         ;Get character from input line
 ;           OR   A              ;End of line (null)? This clears carry flag
-;           JR   Z,@None        ;Yes, so exit as ????with A = 0x00 and Z flagged
+;           JR   Z,.None        ;Yes, so exit as ????with A = 0x00 and Z flagged
             CP   kSpace+1       ;Character > space?
-            JR   C,@Found       ;No, so go end with delimiter
+            JR   C,.Found       ;No, so go end with delimiter
             CALL ConvertCharToUCase
             CALL ConvertCharToNumber
-            JR   NZ,@Bad        ;Bad hex parameter
+            JR   NZ,.Bad        ;Bad hex parameter
             SLA  L              ;Rotate new nibble
             RL   H              ;  into 16 bit result...
             SLA  L
@@ -243,34 +251,34 @@ CLIGetHexParam:
             OR   L
             LD   L,A
             INC  DE
-            JR   @Loop
+            JR   .Loop
 ; Try all other format not starting with hex character
-@Other:     CALL ConvertStringToNumber
-            JR   Z,@Found
-            JR   @Bad
+.Other:     CALL ConvertStringToNumber
+            JR   Z,.Found
+            JR   .Bad
 ; Valid hex parameter found
-@Found:     POP  BC             ;Retore BC
+.Found:     POP  BC             ;Retore BC
             XOR  A              ;Return with A = 0x00
             SCF                 ;  and Z flagged (= no bad hex)
             RET                 ;  and C flagged (= no error)
 ; Parameter error: no parameter found
-@None:      LD   A,C            ;Get error report flags
+.None:      LD   A,C            ;Get error report flags
             AND  kReportMis     ;Missing parameter report flag?
-            CALL NZ,@Error      ;Yes, so report error
+            CALL NZ,.Error      ;Yes, so report error
             POP  BC             ;Retore BC
             XOR  A              ;Return with A = 0x00
             ;  and Z flagged (= no bad hex)
             RET                 ;  and NC flagged (= error)
 ; Parameter error: non-hex digit found
-@Bad:       LD   A,C            ;Get error report flags
+.Bad:       LD   A,C            ;Get error report flags
             AND  kReportBad     ;Bad parameter report flag?
-            CALL NZ,@Error      ;Yes, so report error
+            CALL NZ,.Error      ;Yes, so report error
             POP  BC             ;Retore BC
             LD   A,0xFF         ;;Return with A = 0xFF 
             OR   A              ;  and NZ flagged (= bad hex)
             RET                 ;  and NC flagged (= error)
 ; Report error
-@Error:     ;PUSH DE
+.Error:     ;PUSH DE
             CALL CLIBadParam
             ;POP  DE
             INC  DE
@@ -292,14 +300,14 @@ CLIBadParam:
 
 
 ; Returns NZ if mini-terminal mode
-#IFDEF      IncludeMiniTerm
+	IFDEF IncludeMiniTerm
 IsMiniTerm: LD   A,(iMiniTerm)  ;Get mini-terminal mode flag
             OR   A              ;Return NZ in mini-terminal mode
             RET
-#ELSE
+	ELSE
 IsMiniTerm: XOR  A              ;Return Z as no mini-terminal mode
             RET
-#ENDIF
+	ENDIF
 
 
 ; **********************************************************************
@@ -321,7 +329,7 @@ CmdAPI:     LD   A,kReportAny   ;Report any error
 ;           RET  NC             ;Abort if any error
             EX   DE,HL          ;Prepare DE register value
             LD   A,B            ;Prepare A register
-@Call:      ;RST  $30           ;Call API function C
+.Call:      ;RST  $30           ;Call API function C
             CALL JpAPI          ;Call API function C
             CALL StrWrHexByte   ;Write hex byte to string
             CALL StrWrSpace     ;Write space to string
@@ -331,54 +339,54 @@ CmdAPI:     LD   A,kReportAny   ;Report any error
 
 
 ; Command: Assembler: A [<start address>]
-#IFDEF      IncludeAssembler
+	IFDEF IncludeAssembler
 CmdAssemble:
             LD   HL,(iParam1)   ;Default parameter
             LD   A,kReportBad   ;Only report bad hex parameter
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
 ; Start new line. HL = Current memory location, DE = Not specified
-@NextLine:  LD   (iParam1),HL   ;Update default parameter
+.NextLine:  LD   (iParam1),HL   ;Update default parameter
             CALL WrInstruction
             CALL StrPrint
 ; Input line. HL = Next memory location, DE = Not specified
             CALL InputLine      ;Input text line
-            JR   NZ,@GotLine    ;Skip if line is not a null string
+            JR   NZ,.GotLine    ;Skip if line is not a null string
             CP   kEscape        ;Escaped from input line?
             RET  Z              ;Yes, so abort
-            JR   @NextLine      ;No, so go to next line
+            JR   .NextLine      ;No, so go to next line
 ; Got line to process. HL = Not specified, DE = Start of line
-@GotLine:   LD   HL,(iParam1)   ;Get address for this instruction
+.GotLine:   LD   HL,(iParam1)   ;Get address for this instruction
             LD   A,(DE)         ;Get character from input line
 ;           OR   A              ;End of line?
-;           JR   Z,@NextLine    ;Yes, so go to next location
+;           JR   Z,.NextLine    ;Yes, so go to next location
             CP   '.'            ;End modify?
             RET  Z              ;Yes, so exit
 ;           CP   '"'            ;String? (quote character)
-;           JR   Z,@String      ;Yes...
+;           JR   Z,.String      ;Yes...
 ;           CP   '^'            ;Back one address?
-;           JR   Z,@Back        ;Yes...
+;           JR   Z,.Back        ;Yes...
 ; New assembler instruction
             CALL Assemble       ;Assemble string in input buffer
-            JR   Z,@Error
+            JR   Z,.Error
             LD   HL,(iParam1)
             CALL StrInitDefault ;Initiase default string buffer
             CALL DisWrInstruction ;Full disassembly to string buffer
             CALL StrWrNewLine
             CALL StrPrint       ;Print to output device
-            JR   @NextLine
+            JR   .NextLine
 ; Report error
-@Error:     OR   A              ;Error 0 = unspecifed
-            JR   NZ,@ErrOut     ;No, so skip
+.Error:     OR   A              ;Error 0 = unspecifed
+            JR   NZ,.ErrOut     ;No, so skip
             LD   A,kMsgSyntax   ;Message = Syntax error
-@ErrOut:    CALL OutputMessage  ;Output message
+.ErrOut:    CALL OutputMessage  ;Output message
             LD   HL,(iParam1)
-            JR   @NextLine
-#ENDIF
+            JR   .NextLine
+	ENDIF
 
 
 ; Command: Baud rate: Baud <device> <rate-code>
-#IFDEF      IncludeBaud
+	IFDEF IncludeBaud
 CmdBaud:    LD   A,kReportAny   ;Report bad or missing hex parameter
             CALL CLIGetHexParam
             RET  NC             ;Abort if bad hex in parameter
@@ -391,25 +399,25 @@ CmdBaud:    LD   A,kReportAny   ;Report bad or missing hex parameter
             CALL SetBaud        ;Set device (A) to baud rate (E) 
             JP   Z,CLIBadParam  ;Failed, so raise error
             RET
-#ENDIF
+	ENDIF
 
 
 ; Command: Breakpoint: B [<address>]
-#IFDEF      IncludeBreakpoint
+	IFDEF IncludeBreakpoint
 CmdBP:      LD   HL,(iParam1)   ;Default parameter
             LD   A,kReportBad   ;Only report bad hex parameter
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
-            JR   C,@Set         ;If address given then set breakpoint
+            JR   C,.Set         ;If address given then set breakpoint
             CALL BPReqClr       ;No address, so clear requested address
             LD   A,kMsgBPClr    ;String = Breakpoint cleared
-            JR   @Result        ;Go output message
-@Set:       CALL BPReqSet       ;Attempt to set breakpoint
+            JR   .Result        ;Go output message
+.Set:       CALL BPReqSet       ;Attempt to set breakpoint
             LD   A,kMsgBPSet    ;String = Breakpoint set
-            JR   NZ,@Result     ;Skip if breakpiont set ok
+            JR   NZ,.Result     ;Skip if breakpiont set ok
             LD   A,kMsgBPFail   ;String = Breakpoint setting failed
-@Result:    JP   OutputMessage  ;Output message A
-#ENDIF
+.Result:    JP   OutputMessage  ;Output message A
+	ENDIF
 
 
 ; Command: Console <device>
@@ -420,9 +428,9 @@ CmdConsole: LD   A,kReportAny   ;Report bad or missing hex parameter
             OR   A              ;Device = 0?
             JP   Z,CLIBadParam  ;Yes, then error
             CP   0x0A           ;Identifier is a hex letter?
-            JR   C,@GotNum      ;No, so skip
+            JR   C,.GotNum      ;No, so skip
             SUB  0x09           ;Convert 0x0A/B to 0x01/2
-@GotNum:    CP   7              ;Device >= 7?
+.GotNum:    CP   7              ;Device >= 7?
             JP   NC,CLIBadParam ;Yes, then error
             CALL SelConDev      ;Select console device
             RET
@@ -435,9 +443,9 @@ CmdDevices: ;LD   A,kMsgDevice  ;="Devices:"
 
 
 ; Command: Directory: DIR
-#IFDEF      IncludeRomFS
+	IFDEF IncludeRomFS
 CmdDir:     CALL RomSearchInit  ;Initialise ROM file search
-@Loop:      CALL RomSearchNext  ;Search for next file reference
+.Loop:      CALL RomSearchNext  ;Search for next file reference
             RET  NZ             ;None found so abort
             CALL RomGetName     ;Get pointer to file name
             CALL StrPrintDE     ;Print file name
@@ -449,40 +457,40 @@ CmdDir:     CALL RomSearchInit  ;Initialise ROM file search
             ADD  A              ;A = 4 x File type
             LD   L,A            ;Store as HL
             LD   H,0
-            LD   DE,@Extns      ;Get start of extension strings
+            LD   DE,.Extns      ;Get start of extension strings
             ADD  HL,DE          ;Add offset for this file type
             EX   DE,HL
             CALL OutputZString  ;Output file extension
             CALL OutputNewLine  ;Output new line
-            JR   @Loop
-@Extns:     .DB  "DAT",0        ;Type 0 = Unspecified
+            JR   .Loop
+.Extns:     .DB  "DAT",0        ;Type 0 = Unspecified
             .DB  "COM",0        ;Type 1 = Monitor command
             .DB  "EXE",0        ;Type 2 = Executable
             .DB  "HLP",0        ;Type 3 = Help
             .DB  "TXT",0        ;Type 4 = Text
             .DB  "???",0        ;Type 5 = Unknown
-#ENDIF
+	ENDIF
 
 
 ; Command: Disassemble: D [<start address>]
-#IFDEF      IncludeDisassemble
+	IFDEF IncludeDisassemble
 CmdDisassemble:
 CmdList:
             LD   HL,(iParam1)   ;Default parameter
             LD   A,kReportBad   ;Only report bad hex parameter
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
-@More:      LD   D,20           ;Number of instructions to list
-@Instruct:  CALL DisWrInstruction ;Full disassembly to string buffer
+.More:      LD   D,20           ;Number of instructions to list
+.Instruct:  CALL DisWrInstruction ;Full disassembly to string buffer
             CALL StrWrNewLine   ;Write new line to string buffer
             CALL StrPrint       ;Print to output device
             DEC  D              ;Any more instruction to write?
-            JR   NZ,@Instruct   ;Yes, so go write next one
+            JR   NZ,.Instruct   ;Yes, so go write next one
             LD   (iParam1),HL   ;Update default parameter
             CALL InputMore      ;Print more?
-            JR   Z,@More        ;Yes, so repeat
+            JR   Z,.More        ;Yes, so repeat
             RET
-#ENDIF
+	ENDIF
 
 
 ; Command: Edit memory: E [<start address>]
@@ -491,16 +499,16 @@ CmdEdit:    LD   HL,(iParam1)   ;Default start address
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
 ; Start new line. HL = Current memory location, DE = Not specified
-@NextLine:  LD   (iParam1),HL   ;Store current address
+.NextLine:  LD   (iParam1),HL   ;Store current address
             CALL IsMiniTerm     ;Is this command in mini-terminal mode?
-            JR   NZ,@Mini       ;Yes, so skip
+            JR   NZ,.Mini       ;Yes, so skip
 ; Normal terminal mode
             CALL WrInstruction  ;Write disassembled instruction string
             CALL StrPrint       ;Output disassembled instruction
             CALL InputLine      ;Input text line
-            JR   @Inputed
+            JR   .Inputed
 ; Mini-terminal mode
-@Mini:      CALL StrInitDefault ;Initialise default string buffer
+.Mini:      CALL StrInitDefault ;Initialise default string buffer
             LD   D,H            ;Get current address
             LD   E,L
             INC  HL             ;Prepare return address
@@ -518,21 +526,21 @@ CmdEdit:    LD   HL,(iParam1)   ;Default start address
 
 ; Input line. HL = Next memory location, DE = Not specified
             ;CALL InputLine     ;Input text line
-@Inputed:   JR   NZ,@GotLine    ;Skip if line is not a null string
+.Inputed:   JR   NZ,.GotLine    ;Skip if line is not a null string
             CP   kEscape        ;Escaped from input line?
             RET  Z              ;Yes, so abort
-            JR   @NextLine      ;No, so go to next line
+            JR   .NextLine      ;No, so go to next line
 ; Got line to process. HL = Not specified, DE = Start of line
-@GotLine:   LD   HL,(iParam1)   ;Get address for this instruction
-@NextParam: LD   A,(DE)         ;Get character from input line
+.GotLine:   LD   HL,(iParam1)   ;Get address for this instruction
+.NextParam: LD   A,(DE)         ;Get character from input line
             OR   A              ;End of line?
-            JR   Z,@NextLine    ;Yes, so go to next location
+            JR   Z,.NextLine    ;Yes, so go to next location
             CP   '.'            ;End modify?
             RET  Z              ;Yes, so exit
             CP   '"'            ;String? (quote character)
-            JR   Z,@String      ;Yes...
+            JR   Z,.String      ;Yes...
             CP   '^'            ;Back one address?
-            JR   Z,@Back        ;Yes...
+            JR   Z,.Back        ;Yes...
 ; New memory data is a hex value
             PUSH HL             ;Remember current memory location
             LD   L,A            ;Set default value to current contents
@@ -540,28 +548,28 @@ CmdEdit:    LD   HL,(iParam1)   ;Default start address
             CALL CLIGetHexParam
             LD   A,L            ;Get parameter value (lo byte only)
             POP  HL             ;Restore current location
-            JR   NZ,@NextLine   ;If bad hex parameter start next line
-            JR   NC,@NextLine   ;If no parameter then start next line
+            JR   NZ,.NextLine   ;If bad hex parameter start next line
+            JR   NC,.NextLine   ;If no parameter then start next line
             LD   (HL),A         ;Store new byte at current location
             INC  HL             ;Increment memory location
 ;           LD   (iParam1),HL   ;Update memory location
-            JR   @NextParam
+            JR   .NextParam
 ; New memory data is a string
-@String:    INC  DE             ;Increment pointer to input line
+.String:    INC  DE             ;Increment pointer to input line
             LD   A,(DE)         ;Get character from input line
             OR   A              ;End of string?
-            JR   Z,@NextLine    ;Yes, next line
+            JR   Z,.NextLine    ;Yes, next line
             LD   (HL),A         ;Store new byte at current location
             INC  HL             ;Increment memory location
-            JR   @String
+            JR   .String
 ; Back one location
-@Back:      DEC  HL             ;Back one memory location
-            JR   @NextLine
+.Back:      DEC  HL             ;Back one memory location
+            JR   .NextLine
 
 
 ; Command: Flag: F [<name>]
 CmdFlag:    CALL CLISkipDelim   ;Skip deliminater
-            JR   Z,@Results     ;No flag specified so display flags
+            JR   Z,.Results     ;No flag specified so display flags
 ; Flag name specified so set or clear flag
             LD   HL,FlagNames
             LD   BC,FlagLogic
@@ -571,7 +579,7 @@ CmdFlag:    CALL CLISkipDelim   ;Skip deliminater
             AND  L              ;AND with value from list
             OR   H              ;OR with value form list
             LD   (iAF),A        ;Get flags register
-@Results:   CALL WrRegister1    ;Write registers line 1 to buffer
+.Results:   CALL WrRegister1    ;Write registers line 1 to buffer
             JP   StrPrint       ;Output registers (inc flags)
 
 
@@ -591,14 +599,14 @@ CmdFill:    LD   A,kReportAny   ;Report any error
             LD   E,L            ;Store data byte
             LD   HL,(iParam1)   ;Get start address
             DEC  HL
-@Loop:      INC  HL             ;Point to next address to fill
+.Loop:      INC  HL             ;Point to next address to fill
             LD   (HL),E         ;Write date byte to memory
             LD   A,L            ;Lo byte of current address
             CP   C              ;Same as last address to fill?
-            JR   NZ,@Loop       ;No, so continue
+            JR   NZ,.Loop       ;No, so continue
             LD   A,H            ;Hi byte of current address
             CP   B              ;Same as last address to fill?
-            JR   NZ,@Loop       ;No, so continue
+            JR   NZ,.Loop       ;No, so continue
             RET
 
 
@@ -606,7 +614,7 @@ CmdFill:    LD   A,kReportAny   ;Report any error
 CmdGo:      LD   A,kReportBad   ;Only report bad hex parameter
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
-            JR   NC,@Restore    ;Skip if no address parameter
+            JR   NC,.Restore    ;Skip if no address parameter
             LD   (iPC),HL       ;Store supplied address as PC
             LD   HL,kSPUsr      ;Get top of user stack
             LD   DE,WarmStart   ;Get return address
@@ -615,16 +623,16 @@ CmdGo:      LD   A,kReportBad   ;Only report bad hex parameter
             DEC  HL
             LD   (HL),E
             LD   (iSP),HL       ;Store as user stack pointer
-#IFDEF      IncludeBreakpoint
-@Restore:   JP   BPGo           ;Execute using stored register values
-#ELSE
-@Restore:   LD   HL,(iPC)       ;Get execution address
+	IFDEF IncludeBreakpoint
+.Restore:   JP   BPGo           ;Execute using stored register values
+	ELSE
+.Restore:   LD   HL,(iPC)       ;Get execution address
             JP   (HL)           ;Run from this address
-#ENDIF
+	ENDIF
 
 
 ; Command: Help: HELP or ?
-#IFDEF      IncludeHelp
+	IFDEF IncludeHelp
 CmdHelp:    LD   A,kMsgAbout    ;Message = about text
             CALL OutputMessage  ;Output message
             CALL OutputNewLine  ;Output new line
@@ -632,20 +640,20 @@ CmdHelp:    LD   A,kMsgAbout    ;Message = about text
             ;JP   OutputMessage ;Output message
             CALL OutputMessage  ;Output message
 ; Look for ROM filing system help extensions
-#IFDEF      IncludeRomFS
+	IFDEF IncludeRomFS
             CALL RomSearchInit
-@Loop:      CALL RomSearchNext
+.Loop:      CALL RomSearchNext
             RET  NZ
             CALL RomGetType
             CP   3
-            JR   NZ,@Loop
+            JR   NZ,.Loop
             CALL RomGetHlp
             CALL OutputZString
-            JR   @Loop
-#ELSE
+            JR   .Loop
+	ELSE
             RET
-#ENDIF
-#ENDIF
+	ENDIF
+	ENDIF
 
 
 ; Command: Input: I <port address>
@@ -665,31 +673,31 @@ CmdMemory:  LD   HL,(iParam1)   ;Default parameter
             LD   A,kReportBad   ;Only report bad hex parameter
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
-@More:      LD   D,H
+.More:      LD   D,H
             LD   E,L
             LD   C,8            ;Number of lines of hex dump
-@Line:      CALL WrMemoryDump   ;Build string of one line of dump
+.Line:      CALL WrMemoryDump   ;Build string of one line of dump
             CALL StrPrint       ;Print to output device
             DEC  C              ;End of dump?
-            JR   NZ,@Line       ;No, so loop back for another line
+            JR   NZ,.Line       ;No, so loop back for another line
             LD   H,D
             LD   L,E
             LD   (iParam1),HL   ;Update default parameter
             CALL InputMore      ;Print more?
-            JR   Z,@More        ;Yes, so repeat
+            JR   Z,.More        ;Yes, so repeat
             RET
 
 
 ; Command: New script: NEW
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
 CmdNew:     JP   ScrNew         ;Script, new command
-#ENDIF
+	ENDIF
 
 
 ; Command: Old script: OLD
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
 CmdOld:     JP   ScrOld         ;Script, old command
-#ENDIF
+	ENDIF
 
 
 ; Command: Output: O <port address> <port data>
@@ -709,14 +717,14 @@ CmdOut:     LD   A,kReportAny   ;Report any error
 ; Command: Registers: R [<name>]
 CmdRegisters:
             CALL CLISkipDelim   ;Skip deliminater
-            JR   NZ,@Param      ;Go handle parameter
+            JR   NZ,.Param      ;Go handle parameter
 ; No parameters, so just output register values
-@Show:      CALL WrRegister1
+.Show:      CALL WrRegister1
             CALL StrPrint
             CALL WrRegister2
             JP   StrPrint
 ; Handle parameter
-@Param:     PUSH DE             ;Preserve start address of parameter
+.Param:     PUSH DE             ;Preserve start address of parameter
             LD   HL,RegisterNames
             LD   BC,RegisterAddresses
             CALL SearchStringList
@@ -725,15 +733,15 @@ CmdRegisters:
 ; Edit specified register's value
             CALL StrInitDefault ;Initialise default string buffer
             LD   C,0            ;Length of register name
-@NextChar:  LD   A,(DE)         ;Get character of register name
+.NextChar:  LD   A,(DE)         ;Get character of register name
             CP   kSpace-1       ;End of register name?
-            JR   C,@Colon       ;Yes, so write colon
+            JR   C,.Colon       ;Yes, so write colon
             CALL ConvertCharToUCase
             CALL StrWrChar      ;Write character to string buffer
             INC  C              ;Count characters in name
             INC  DE             ;Increment to next char of name
-            JR   @NextChar      ;  and go get next character
-@Colon:     LD   A,':'          ;Get colon character
+            JR   .NextChar      ;  and go get next character
+.Colon:     LD   A,':'          ;Get colon character
             CALL StrWrChar      ;Write colon to string buffer
             CALL StrWrSpace     ;Write space to string buffer
             LD   E,(HL)         ;Get register contents
@@ -742,12 +750,12 @@ CmdRegisters:
             DEC  HL
             LD   A,C            ;Length of register name
             CP   1              ;One character long?
-            JR   NZ,@Word
+            JR   NZ,.Word
             LD   A,E            ;Get lo byte 
             CALL StrWrHexByte   ;Write hex byte value of register
-            JR   @Space
-@Word:      CALL StrWrHexWord   ;Write hex word value of register
-@Space:     LD   A,2
+            JR   .Space
+.Word:      CALL StrWrHexWord   ;Write hex word value of register
+.Space:     LD   A,2
             CALL StrWrSpaces    ;Write 2 spaces to string buffer
             CALL StrPrint       ;Print current string ot output device
 ; Input line. HL = Memory location of register
@@ -771,24 +779,24 @@ CmdRegisters:
 
 
 ; Command: Reset: RESET
-CmdReset:   .EQU ColdStart      ;Command reset = Cold start system
+CmdReset   = ColdStart      ;Command reset = Cold start system
             DI                  ;Disable interrupts
             JP   ColdStart      ;Run as if hardware reset
 
 
 ; Command: Script list: SCRIPT
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
 CmdScript:  JP   ScrList
-#ENDIF
+	ENDIF
 
 
 ; Command: Step: S [<start address>]
-#IFDEF      IncludeDisassemble
-#IFDEF      IncludeBreakpoint
+	IFDEF IncludeDisassemble
+	IFDEF IncludeBreakpoint
 CmdStep:    LD   A,kReportBad   ;Only report bad hex parameter
             CALL CLIGetHexParam
             RET  NZ             ;Abort if bad hex in parameter
-            JR   NC,@Restore    ;Skip if no address parameter
+            JR   NC,.Restore    ;Skip if no address parameter
             LD   (iPC),HL       ;Store supplied address as PC
             LD   HL,kSPUsr      ;Get top of user stack
             LD   DE,WarmStart   ;Get return address
@@ -797,37 +805,37 @@ CmdStep:    LD   A,kReportBad   ;Only report bad hex parameter
             DEC  HL
             LD   (HL),E
             LD   (iSP),HL       ;Store as user stack pointer
-@Restore:   JP   BPStep         ;Execute using stored register values
-#ENDIF
-#ENDIF
+.Restore:   JP   BPStep         ;Execute using stored register values
+	ENDIF
+	ENDIF
 
 
 ; Trap optional features that have not been included in this build
-#IFNDEF     IncludeAssembler
+	IFNDEF IncludeAssembler
 CmdAssemble:
-#ENDIF
-#IFNDEF     IncludeBaud
+	ENDIF
+	IFNDEF IncludeBaud
 CmdBaud:
-#ENDIF
-#IFNDEF     IncludeBreakpoint
+	ENDIF
+	IFNDEF IncludeBreakpoint
 CmdBP:
 CmdStep:
-#ENDIF
-#IFNDEF     IncludeDisassemble
+	ENDIF
+	IFNDEF IncludeDisassemble
 CmdDisassemble:
 CmdList:
-#ENDIF
-#IFNDEF     IncludeRomFS
+	ENDIF
+	IFNDEF IncludeRomFS
 CmdDir:
-#ENDIF
-#IFNDEF     IncludeScripting
+	ENDIF
+	IFNDEF IncludeScripting
 CmdNew:
 CmdOld:
 CmdScript:
-#ENDIF
-#IFNDEF     IncludeHelp
+	ENDIF
+	IFNDEF IncludeHelp
 CmdHelp:
-#ENDIF
+	ENDIF
             LD   A,kMsgNotAv    ;Message = Feature no included
             JP   OutputMessage  ;Output message
 
@@ -915,11 +923,11 @@ CmdNameList:
             .DB  128+'R',"ESET" ;RESET    Reset
             .DB  128+'R',"OM"   ;ROM      Directory
 ; Optional commands
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
             .DB  128+'N',"EW"   ;NEW      New (for script)
             .DB  128+'O',"LD"   ;OLD      Old (for script)
             .DB  128+'S',"CRIPT"  ;SCRIPT  Script (list program)
-#ENDIF
+	ENDIF
             .DB  128            ;List terminator
 
 ; Command address list
@@ -948,11 +956,11 @@ CmdAddressList:
             .DW  CmdReset       ;RESET    Reset
             .DW  CmdDir         ;ROM      Directory
 ; Optional commands
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
             .DW  CmdNew         ;NEW      New
             .DW  CmdOld         ;OLD      Old
             .DW  CmdScript      ;SCRIPT   Script 
-#ENDIF
+	ENDIF
 
 
 ; Register name list (bit 7 delimited)
@@ -1052,15 +1060,31 @@ FlagLogic:  .DB  0x7F,0x80      ;S    Bit 7, Flag S set to 1 (negative/minus)
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iParam1:    .DW  0x0000         ;CLI parameter 1
 
-#IFDEF      IncludeMiniTerm
+	IFDEF IncludeMiniTerm
 iMiniTerm:  .DB  0x00           ;Mini terminal flag
-#ENDIF
+	ENDIF
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; **********************************************************************
 ; **  End of Command Line Interpreter                                 **

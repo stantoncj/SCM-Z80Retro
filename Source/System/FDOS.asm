@@ -4,7 +4,15 @@
 
 ; Currently this is just a proff of concept!
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; FDOS: Main entry point
 ;   On entry: C = Function number
@@ -97,7 +105,7 @@ FDOSTable:  .DW  Reset          ;  0 = System reset
 ;           .DW  FDOSExit       ; 39 = Unspecified
 ;           .DW  FDOSExit       ; 40 = Write random with zero fill
 
-kFDOSLast:  .EQU 2              ;Last FDOS function number
+kFDOSLast  = 2              ;Last FDOS function number
 
 
 ; **********************************************************************

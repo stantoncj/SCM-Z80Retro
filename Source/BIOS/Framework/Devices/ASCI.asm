@@ -13,39 +13,55 @@
 ; ASCI too complex to reproduce technical info here. See ASCI datasheet
 
 ; Externally definitions required:
-;kASCIBase: .SET CNTLA0         ;I/O base address
-;kASCIACoA: .SET kASCIBase+0    ;I/O address of chan A control register A
-;kASCIACoB: .SET kASCIBase+2    ;I/O address of chan A control register B
-;kASCIASta: .SET kASCIBase+4    ;I/O address of chan A status register
-;kASCIATxd: .SET kASCIBase+6    ;I/O address of chan A tx data register
-;kASCIARxd: .SET kASCIBase+8    ;I/O address of chan A rx data register
-;kASCIBCoA: .SET kASCIBase+1    ;I/O address of chan B control register A
-;kASCIBCoB: .SET kASCIBase+3    ;I/O address of chan B control register B
-;kASCIBSta: .SET kASCIBase+5    ;I/O address of chan B status register
-;kASCIBTxd: .SET kASCIBase+7    ;I/O address of chan B tx data register
-;kASCIBRxd: .SET kASCIBase+9    ;I/O address of chan B rx data register
+;kASCIBase = CNTLA0         ;I/O base address
+;kASCIACoA = kASCIBase+0    ;I/O address of chan A control register A
+;kASCIACoB = kASCIBase+2    ;I/O address of chan A control register B
+;kASCIASta = kASCIBase+4    ;I/O address of chan A status register
+;kASCIATxd = kASCIBase+6    ;I/O address of chan A tx data register
+;kASCIARxd = kASCIBase+8    ;I/O address of chan A rx data register
+;kASCIBCoA = kASCIBase+1    ;I/O address of chan B control register A
+;kASCIBCoB = kASCIBase+3    ;I/O address of chan B control register B
+;kASCIBSta = kASCIBase+5    ;I/O address of chan B status register
+;kASCIBTxd = kASCIBase+7    ;I/O address of chan B tx data register
+;kASCIBRxd = kASCIBase+9    ;I/O address of chan B rx data register
 
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
 ; SCM BIOS framework interface descriptor
 
             .DB  0              ;Device ID code (not currently used)
-            .DW  @String        ;Pointer to device string
-            .DW  @ASCI_Init     ;Pointer to initialisation code
+            .DW  .String        ;Pointer to device string
+            .DW  .ASCI_Init     ;Pointer to initialisation code
             .DB  kASCIFlag      ;Hardware flags bit mask
-            .DW  @ASCI_Set      ;Point to device settings code
+            .DW  .ASCI_Set      ;Point to device settings code
             .DB  2              ;Number of console devices
-            .DW  @ASCI_RxA      ;Pointer to 1st channel input code
-            .DW  @ASCI_TxA      ;Pointer to 1st channel output code
-            .DW  @ASCI_RxB      ;Pointer to 2nd channel input code
-            .DW  @ASCI_TxB      ;Pointer to 2nd channel output code
-@String:    .DB  "Z180 ASCI "
+            .DW  .ASCI_RxA      ;Pointer to 1st channel input code
+            .DW  .ASCI_TxA      ;Pointer to 1st channel output code
+            .DW  .ASCI_RxB      ;Pointer to 2nd channel input code
+            .DW  .ASCI_TxB      ;Pointer to 2nd channel output code
+.String:    .DB  "Z180 ASCI "
             .DB  "@ "
-            .HEXCHAR kASCIBase \ 16
-            .HEXCHAR kASCIBase & 15
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kASCIBase / 16")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kASCIBase & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
             .DB  kNull
 
 
@@ -56,14 +72,14 @@
 ;             AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; If the device is found it is initialised
-@ASCI_Init:
-#IF         PROCESSOR = "Z180"
+.ASCI_Init:
+	IF PROCESSOR = "Z180"
             XOR  A              ;Set Z flag (success)
             RET                 ;  and return
-#ELSE
+	ELSE
             OR   0xFF           ;Set NZ flag (failure)
             RET                 ;  and return
-#ENDIF
+	ENDIF
 
 
 ; **********************************************************************
@@ -72,13 +88,13 @@
 ;   On exit:  A = Character input from the device
 ;             NZ flagged if a character has been found
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@ASCI_RxA:
+.ASCI_RxA:
             IN0  A,(kASCIASta)  ;Read serial port status register
             BIT  ST_RDRF,A      ;Receive register full?
             RET  Z              ;Return Z as no character available
             IN0  A,(kASCIARxd)  ;Read data byte
             RET
-@ASCI_RxB:
+.ASCI_RxB:
             IN0  A,(kASCIBSta)  ;Read serial port status register
             BIT  ST_RDRF,A      ;Receive register full?
             RET  Z              ;Return Z as no character available
@@ -94,7 +110,7 @@
 ;             If character output failed (eg. device busy)
 ;               Z flagged and A = Character to output
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@ASCI_TxA:
+.ASCI_TxA:
             PUSH BC             ;Preserve BC
             IN0  B,(kASCIASta)  ;Read serial port status register
             BIT  ST_TDRE,B      ;Transmit register empty?
@@ -103,7 +119,7 @@
             OUT0 (kASCIATxd), A ;Write byte to serial port
             OR   0xFF           ;Return success A=0xFF and NZ flagged
             RET
-@ASCI_TxB:
+.ASCI_TxB:
             PUSH BC             ;Preserve BC
             IN0  B,(kASCIBSta)  ;Read serial port status register
             BIT  ST_TDRE,B      ;Transmit register empty?
@@ -125,8 +141,8 @@
 ;             BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; Baud rate codes are 1 to 12 (1 = 230400 baud, ... , 12 = 300 baud)
-@ASCI_Set:  CP   1              ;Baud rate?
-            JR   NZ,@Failed     ;No, so go return failure
+.ASCI_Set:  CP   1              ;Baud rate?
+            JR   NZ,.Failed     ;No, so go return failure
 ; WARNING: We assume serial port A is an odd numbered console device
 ;          and serial port B is an even numbered console device
 ; Determine which serial port is being set
@@ -136,21 +152,21 @@
 ; Search for baud rate in table
 ; A = Baud rate code  (not verified)
 ; C = Console device number (1 to 6)  (not verified)
-            LD   HL,@BaudTable  ;Start of baud rate table
+            LD   HL,.BaudTable  ;Start of baud rate table
             LD   B,13           ;Number of table entries
-@Search:    CP   (HL)           ;Record for required baud rate?
-            JR   Z,@Found       ;Yes, so go get time constant
+.Search:    CP   (HL)           ;Record for required baud rate?
+            JR   Z,.Found       ;Yes, so go get time constant
             CP   B              ;Record number = baud rate code?
-            JR   Z,@Found       ;Yes, so go get time constant
+            JR   Z,.Found       ;Yes, so go get time constant
             INC  HL             ;Point to next record
-            DJNZ @Search        ;Repeat until end of table
-@Failed:    XOR  A              ;Return failure (A=0 and Z flagged)
+            DJNZ .Search        ;Repeat until end of table
+.Failed:    XOR  A              ;Return failure (A=0 and Z flagged)
             RET                 ;Abort as invalid baud rate
 ; Found location in table
 ; B = Baud code (1 to 13)  (verified)
 ; C = Console device number (1 to 6)  (not verified)
 ; (HL) = Serial hardware settings  (verified)
-@Found:     LD   HL,@SettingsTable-1
+.Found:     LD   HL,.SettingsTable-1
             LD   E,B            ;Get baud rate code (1 to 13)
             LD   D,0
             ADD  HL,DE          ;Calculate address in table
@@ -163,17 +179,17 @@
             LD   A,C            ;Get console device number (1 to 6)
             AND  1              ;SIO port A (odd number) ?   *** WARNING ***
             LD   A,(HL)         ;Get register value
-            JR   Z,@PortB       ;No, not port A, so skip
+            JR   Z,.PortB       ;No, not port A, so skip
             OUT0 (kASCIACoB),A  ;Set port A baud rate
-            JR   @BaudSet       ;Go return success
-@PortB:     OUT0 (kASCIBCoB),A  ;Set port B baud rate
-@BaudSet:   OR   0xFF           ;Return success (A=0xFF and NZ flagged)
+            JR   .BaudSet       ;Go return success
+.PortB:     OUT0 (kASCIBCoB),A  ;Set port B baud rate
+.BaudSet:   OR   0xFF           ;Return success (A=0xFF and NZ flagged)
             RET
 ;
 ; Baud rate table 
 ; Position in table matches value of short baud rate code (1 to 13)
 ; The table data bytes is the long baud rate code (eg. 0x96 for 9600)
-@BaudTable: .DB  0x15           ;13 =    150
+.BaudTable: .DB  0x15           ;13 =    150
             .DB  0x30           ;12 =    300
             .DB  0x60           ;11 =    600
             .DB  0x12           ;10 =   1200
@@ -212,31 +228,31 @@
 ;   bit 3 = sampling divider, 0 = /16, 1 = /64
 ;   bits 0 to 2 = baud rate divider 0 = /1, 1 = /2, ... 6 = /64
 ;   bit 7 is set for supported baud rates
-@Sam16      .EQU 0 + 128
-@Sam64      .EQU 8 + 128
-@Pre10      .EQU 0
-@Pre30      .EQU 32
-@Div1       .EQU 0
-@Div2       .EQU 1
-@Div4       .EQU 2
-@Div8       .EQU 3
-@Div16      .EQU 4
-@Div32      .EQU 5
-@Div64      .EQU 6
-@SettingsTable:                 ;Code,  Baud,  Sample, Prescal, BRDivide
+@Sam16      = 0 + 128
+@Sam64      = 8 + 128
+@Pre10      = 0
+@Pre30      = 32
+@Div1       = 0
+@Div2       = 1
+@Div4       = 2
+@Div8       = 3
+@Div16      = 4
+@Div32      = 5
+@Div64      = 6
+.SettingsTable:                 ;Code,  Baud,  Sample, Prescal, BRDivide
             .DB  0              ; 1 = 230400 (not supported)
-            .DB  @Sam16 + @Pre10 + @Div1  ; 2 = 115200
-            .DB  @Sam16 + @Pre10 + @Div2  ; 3 =  57600
-            .DB  @Sam16 + @Pre30 + @Div1  ; 4 =  38400
-            .DB  @Sam16 + @Pre30 + @Div2  ; 5 =  19200
-            .DB  @Sam16 + @Pre10 + @Div8  ; 6 =  14400
-            .DB  @Sam64 + @Pre30 + @Div1  ; 7 =   9600
-            .DB  @Sam64 + @Pre30 + @Div2  ; 8 =   4800
-            .DB  @Sam64 + @Pre30 + @Div4  ; 9 =   2400
-            .DB  @Sam64 + @Pre30 + @Div8  ;10 =   1200
-            .DB  @Sam64 + @Pre30 + @Div16 ;11 =    600
-            .DB  @Sam64 + @Pre30 + @Div32 ;12 =    300
-            .DB  @Sam64 + @Pre30 + @Div64 ;13 =    150
+            .DB  .Sam16 + .Pre10 + .Div1  ; 2 = 115200
+            .DB  .Sam16 + .Pre10 + .Div2  ; 3 =  57600
+            .DB  .Sam16 + .Pre30 + .Div1  ; 4 =  38400
+            .DB  .Sam16 + .Pre30 + .Div2  ; 5 =  19200
+            .DB  .Sam16 + .Pre10 + .Div8  ; 6 =  14400
+            .DB  .Sam64 + .Pre30 + .Div1  ; 7 =   9600
+            .DB  .Sam64 + .Pre30 + .Div2  ; 8 =   4800
+            .DB  .Sam64 + .Pre30 + .Div4  ; 9 =   2400
+            .DB  .Sam64 + .Pre30 + .Div8  ;10 =   1200
+            .DB  .Sam64 + .Pre30 + .Div16 ;11 =    600
+            .DB  .Sam64 + .Pre30 + .Div32 ;12 =    300
+            .DB  .Sam64 + .Pre30 + .Div64 ;13 =    150
 
 
 ; **********************************************************************

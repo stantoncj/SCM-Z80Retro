@@ -33,13 +33,13 @@
 ; **********************************************************************
 
 ; Operating system version number
-;kSysMajor: .EQU 1              ;Bios version: revision
-;kSysMinor: .EQU 0              ;Bios version: revision
-;kSysRevis: .EQU 1              ;Bios version: revision
+;kSysMajor = 1              ;Bios version revision
+;kSysMinor = 0              ;Bios version revision
+;kSysRevis = 1              ;Bios version revision
 
 
 ; Memory map (ROM or RAM)
-Reset:      .EQU 0x0000         ;Z80 reset location
+Reset      = 0x0000         ;Z80 reset location
 
 
 ; Page zero use 
@@ -64,10 +64,10 @@ Reset:      .EQU 0x0000         ;Z80 reset location
 ; 0080-00FF                    As CP/M     Default DMA
 
 ; Memory map (ROM)
-;kCode:     .EQU 0x0000         ;Typically 0x0000 or 0xE000
+;kCode     = 0x0000         ;Typically 0x0000 or 0xE000
 
 ; Memory map (RAM)
-;kData:     .EQU 0xFC00         ;Typically 0xFC00 (to 0xFFFF)
+;kData     = 0xFC00         ;Typically 0xFC00 (to 0xFFFF)
 ; 0xFC00 to 0xFCBF  User stack
 ; 0xFCC0 to 0xFCFF  System stack
 ; 0xFD00 to 0xFD7F  Line input buffer
@@ -80,51 +80,89 @@ Reset:      .EQU 0x0000         ;Z80 reset location
 ; 0xFFD0 to 0xFFDF    ROMFS file info block 2
 ; 0xFFE0 to 0xFFEF    ROMFS file info block 1
 ; 0xFFF0 to 0xFFFF    System variables
-kSPUsr:     .EQU kData+0x00C0   ;Top of stack for user program
-kSPSys:     .EQU kData+0x0100   ;Top of stack for system
-kInputBuff: .EQU kData+0x0100   ;Line input buffer start    (to +0x017F)
-kInputSize: .EQU 128            ;Size of input buffer
-kStrBuffer: .EQU kData+0x0180   ;String buffer              (to +0x01FF)
-kStrSize:   .EQU 128            ;Size of string buffer
-kJumpTab:   .EQU kData+0x0200   ;Redirection jump table     (to +0x025F)
-;kWorkspace:                    .EQU kData+0x0260;Space for data & variables (to +0x02FF)
+kSPUsr     = kData+0x00C0   ;Top of stack for user program
+kSPSys     = kData+0x0100   ;Top of stack for system
+kInputBuff = kData+0x0100   ;Line input buffer start    (to +0x017F)
+kInputSize = 128            ;Size of input buffer
+kStrBuffer = kData+0x0180   ;String buffer              (to +0x01FF)
+kStrSize   = 128            ;Size of string buffer
+kJumpTab   = kData+0x0200   ;Redirection jump table     (to +0x025F)
+;kWorkspace                    = kData+0x0260;Space for data & variables (to +0x02FF)
 ; Pass information between apps and memory banks 0xFF00 to 0xFFFF
-kPassData   .EQU kData+0x0300   ;0xFF00 to 0xFF7F Transient data area
-kPassCode:  .EQU kData+0x0380   ;0xFF80 to 0xFFEF Transient code area
-kPassInfo:  .EQU kData+0x03F0   ;0xFFF0 to 0xFFFF Variable passing area
-kPassCtrl:  .EQU kPassInfo+0x00 ;Pass control / paging information
-kPassAF:    .EQU kPassInfo+0x02 ;Pass AF to/from API
-kPassBC:    .EQU kPassInfo+0x04 ;Pass BC to/from API
-kPassDE:    .EQU kPassInfo+0x06 ;Pass DE to/from API
-kPassHL:    .EQU kPassInfo+0x08 ;Pass HL --/from API
-kPassDevI:  .EQU kPassInfo+0x0A ;Pass current input device
-kPassDevO:  .EQU kPassInfo+0x0B ;Pass current output device
+kPassData   = kData+0x0300   ;0xFF00 to 0xFF7F Transient data area
+kPassCode  = kData+0x0380   ;0xFF80 to 0xFFEF Transient code area
+kPassInfo  = kData+0x03F0   ;0xFFF0 to 0xFFFF Variable passing area
+kPassCtrl  = kPassInfo+0x00 ;Pass control / paging information
+kPassAF    = kPassInfo+0x02 ;Pass AF to/from API
+kPassBC    = kPassInfo+0x04 ;Pass BC to/from API
+kPassDE    = kPassInfo+0x06 ;Pass DE to/from API
+kPassHL    = kPassInfo+0x08 ;Pass HL --/from API
+kPassDevI  = kPassInfo+0x0A ;Pass current input device
+kPassDevO  = kPassInfo+0x0B ;Pass current output device
 
 ; Fixed address to allow external code to use it
-kTransCode: .EQU kData+0x0380   ;0xFF80 Transient code area
+kTransCode = kData+0x0380   ;0xFF80 Transient code area
 
 ; Fixed address to allow external code to use this data
-iConfigCpy: .EQU kData+0x03F0   ;0xFFF0 Configure register shadow copy
-iConfigPre: .EQU kData+0x03F1   ;0xFFF1 Config register previous copy
+iConfigCpy = kData+0x03F0   ;0xFFF0 Configure register shadow copy
+iConfigPre = kData+0x03F1   ;0xFFF1 Config register previous copy
 
 ; Define memory usage
-kSysData    .EQU kData + 0x0260
-kMonData    .EQU kData + 0x0280
-kBiosData   .EQU kData + 0x02C0
-kEndOfData  .EQU kData + 0x03FF
+kSysData    = kData + 0x0260
+kMonData    = kData + 0x0280
+kBiosData   = kData + 0x02C0
+kEndOfData  = kData + 0x03FF
 
 ; **********************************************************************
 ; **  Initialise memory sections                                      **
 ; **********************************************************************
 
 ; Initialise data section
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-            .ORG  kSysData      ;Establish workspace/data area
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("kSysData")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("kSysData")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
-            .ORG kJumpTab
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("kJumpTab")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("kJumpTab")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 JpNMI:      JP   0              ;Fn 0x00: Jump to non-maskable interrupt
 JpRST08:    JP   0              ;Fn 0x01: Jump to restart 08 handler
@@ -160,8 +198,27 @@ JpTimer3:   JP   0              ;Fn 0x0F: Jump to timer 3 handler
 ;           .ORG  kWorkspace
 
 ; Initialise code section
-            .CODE
-            .ORG  kCode
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("kCode")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("kCode")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
@@ -211,8 +268,8 @@ kaPortOut:  .DB  kPrtOut        ;0x0048  Default status output port
             .DB  0              ;0x004B  Not used
             .DB  0              ;0x004C  Not used
 kaRomTop:   .DB  kROMTop        ;0x004D  Top of RomFS (hi byte)
-kaCodeBeg:  .DB  CodeBegin\256  ;0x004E  Start of SCM code (hi byte)
-kaCodeEnd:  .DB  CodeEnd\256    ;0x004F  End of SCM code (hi byte)
+kaCodeBeg:  .DB  CodeBegin/256  ;0x004E  Start of SCM code (hi byte)
+kaCodeEnd:  .DB  CodeEnd/256    ;0x004F  End of SCM code (hi byte)
 kaConfig0:  .DB  kConfig0       ;0x0050  BIOS specific config data #0
 kaConfig1:  .DB  kConfig1       ;0x0051  BIOS specific config data #1
 kaConfig2:  .DB  kConfig2       ;0x0052  BIOS specific config data #2
@@ -272,13 +329,13 @@ JumpEnd:
 
 ; Cold start Command Line Interpreter
 ColdStrt:
-#IFNDEF     EXTERNALOS
+	IFNDEF EXTERNALOS
             DI                  ;Disable interrupts
-#ENDIF
+	ENDIF
             LD   SP,kSPSys      ;Initialise system stack pointer
 ; Copy vectors etc to page zero in case code is elsewhere
 ; When using external OS for I/O only initialise SCM's API restart
-#IFDEF      EXTERNALOS
+	IFDEF EXTERNALOS
             LD   HL,0x0030      ;Address of SCM's API restart
             LD   (HL),0xC3      ;Write JP instruction at restart
             INC  HL             ;Increment address pointer
@@ -286,17 +343,17 @@ ColdStrt:
             LD   (HL),E         ;  at restart...
             INC  HL             ;  Should use LD (HL),JpAPI/256 etc
             LD   (HL),D         ;  but homebrew assembler fails at that
-#ELSE
+	ELSE
             LD   DE,0x0000      ;Copy vectors etc to here
             LD   HL,Page0Strt   ;Copy vectors etc from here
             LD   BC,Page0End-Page0Strt  ;Number of bytes to copy
-#IFDEF      ROM_ONLY
+	IFDEF ROM_ONLY
             NOP                 ;Do not copy bytes
             NOP
-#ELSE
+	ELSE
             LDIR                ;Copy bytes
-#ENDIF
-#ENDIF
+	ENDIF
+	ENDIF
 ; Initialise jump table, other than console devices
             LD   DE,kJumpTab    ;Copy jump table to here
             LD   HL,JumpStrt    ;Copy jump table from here
@@ -319,12 +376,12 @@ ColdStrt:
             CALL SelConDev      ;Select console device
 ; Initialise rest of system
             CALL ConInitialise  ;Initialise the console
-#IFDEF      IncludeRomFS
+	IFDEF IncludeRomFS
             CALL RomInitialise  ;Initialise RomFS
-#ENDIF
-#IFDEF      IncludeScripting
+	ENDIF
+	IFDEF IncludeScripting
             CALL ScrInitialise  ;Initialise script language
-#ENDIF
+	ENDIF
 ; Output sign-on message
             CALL OutputNewLine  ;Output new line
             CALL OutputNewLine  ;Output new line
@@ -334,14 +391,14 @@ ColdStrt:
             CALL OutputChar     ;Output character
             LD   A,kSpace       ;=" "
             CALL OutputChar     ;Output character
-#IFDEF      NAME_VIA_CODE
+	IFDEF NAME_VIA_CODE
             CALL HW_MsgName     ;Output hardware name
-#ELSE
+	ELSE
             CALL C_GetName      ;Get config name 
             CALL OutputZString  ;Output message at DE
-#ENDIF
+	ENDIF
             CALL OutputNewLine  ;Output new line
-#IFNDEF     IncludeCommands
+	IFNDEF IncludeCommands
             CALL OutputNewLine  ;Output new line
             LD   A,kMsgAbout    ;="Small Computer Monitor ..."
             CALL OutputMessage  ;Output message A
@@ -350,31 +407,31 @@ ColdStrt:
             CALL OutputMessage  ;Output message A
             LD   A,kMsgDevLst   ;="<device list>"
             CALL OutputMessage  ;Output message A
-#ENDIF
+	ENDIF
 
 ; Warm start Command Line Interpreter
 WarmStrt:   LD   SP,kSPSys      ;Initialise system stack pointer
-#IFDEF      IncludeMonitor
+	IFDEF IncludeMonitor
             CALL M_MonInit      ;Initialise monitor
-#ENDIF
-#IFDEF      IncludeMonitor
+	ENDIF
+	IFDEF IncludeMonitor
 ;#IFDEF     IncludeCommands
             JP   M_CLILoop      ;Command Line Interpreter main loop
 ;#ENDIF
-#ELSE
-@Halt:      JR   @Halt          ;Halt here if no CLI
-#ENDIF
+	ELSE
+.Halt:      JR   .Halt          ;Halt here if no CLI
+	ENDIF
 
 ; Trap unused entry points
-#IFNDEF     IncludeAPI
+	IFNDEF IncludeAPI
 API:
-#ENDIF
-#IFNDEF     IncludeFDOS
+	ENDIF
+	IFNDEF IncludeFDOS
 FDOS:
-#ENDIF
-#IFNDEF     IncludeBreakpoint
+	ENDIF
+	IFNDEF IncludeBreakpoint
 BPHandler:
-#ENDIF
+	ENDIF
 TrapCALL:   XOR   A             ;Return A=0x00 and Z flagged
             RET                 ;Return from entry point
 
@@ -549,7 +606,7 @@ DevOutput:  PUSH AF             ;Store character to be output
             JP   (HL)           ;Jump to output routine
 
 
-#IFDEF      NOCHANCE
+	IFDEF NOCHANCE
 ; System: Delay by specified number of millseconds
 ;   On entry: DE = Delay time in milliseconds
 ;   On exit:  BC DE HL IX IY I AF' BC' DE' HL' preserved
@@ -561,20 +618,20 @@ DevOutput:  PUSH AF             ;Store character to be output
 Delay:      PUSH BC
             PUSH DE
 ; 1 ms loop, DE times... (overhead = 36 TCy)
-@LoopDE:    LD   BC,kDelayCnt   ;[10]  Loop counter
+.LoopDE:    LD   BC,kDelayCnt   ;[10]  Loop counter
 ; 26 TCy loop, BC times...
-@LoopBC:    DEC  BC             ;[6]
+.LoopBC:    DEC  BC             ;[6]
             LD   A,C            ;[4]
             OR   B              ;[4]
-            JP   NZ,@LoopBC     ;[10]
+            JP   NZ,.LoopBC     ;[10]
             DEC  DE             ;[6]
             LD   A,E            ;[4]
             OR   D              ;[4]
-            JR   NZ,@LoopDE     ;[12/7]
+            JR   NZ,.LoopDE     ;[12/7]
             POP  DE
             POP  BC
             RET
-#ENDIF
+	ENDIF
 
 
 ; System: Get current console device numbers
@@ -623,15 +680,15 @@ GetVersion:
             ;LD  A,kConfHardw   ;A = Hardware identifier
             ;LD  B,kConfMajor   ;B = Major configuration
             ;LD  C,kConfMinor   ;C = Minor configuration 
-#IFDEF      IncludeMonitor
+	IFDEF IncludeMonitor
             LD  D,kMonMajor     ;D = Major version number
             LD  E,kMonMinor     ;E = Minor version number
             LD  A,kMonRevis     ;A = Revision number
-#ELSE
+	ELSE
             LD  D,0             ;D = Major version number
             LD  E,0             ;E = Minor version number
             LD  A,0             ;A = Revision number
-#ENDIF
+	ENDIF
             RET
 
 
@@ -644,19 +701,19 @@ OutputMessage:
             PUSH DE             ;Preserve DE
             PUSH HL             ;Preserve HL
 ; Monitor message?
-#IFDEF      IncludeMonitor
+	IFDEF IncludeMonitor
             CALL M_OutputMs     ;Offer message number to monitor
             OR   A              ;Message still needs handling?
-            JR   Z,@Exit        ;No, so exit
-#ENDIF
+            JR   Z,.Exit        ;No, so exit
+	ENDIF
 ; Add any other message generating modules here
 ; ...........
 ; System message?
             CP   kMsgLstSys+1   ;Valid system message number?
-            JR   NC,@Exit       ;No, so abort
+            JR   NC,.Exit       ;No, so abort
 ; About message?
             CP   kMsgAbout      ;About message?
-            JR   NZ,@NotAbout   ;No, so skip
+            JR   NZ,.NotAbout   ;No, so skip
             LD   DE,szProduct   ;="Small Computer Monitor"
             CALL OutputZString  ;Output message at DE
             LD   DE,szAbout     ;="<about this configuration>"
@@ -675,12 +732,12 @@ OutputMessage:
             EX   DE,HL          ;Get pointer to date string
             CALL OutputZString  ;Output message at DE
 
-#IFDEF      IncludeMonitor
+	IFDEF IncludeMonitor
             LD   DE,szMonitor   ;=" Monitor "
             CALL OutputZString  ;Output message at DE
             CALL M_GetVers      ;Get monitor version details
             CALL OutputVers     ;Output version D.E.A
-#ENDIF
+	ENDIF
 
             ;LD   DE,szOS       ;=" OS "
             ;CALL OutputZString ;Output message at DE
@@ -702,16 +759,16 @@ OutputMessage:
 
             CALL  OutputNewLine
 
-            JR   @Exit
-@NotAbout:
+            JR   .Exit
+.NotAbout:
 ; Device list message?
             CP   kMsgDevLst     ;Device list message?
-            JR   NZ,@NotDevLst  ;No, so skip
+            JR   NZ,.NotDevLst  ;No, so skip
 ;           LD   DE,szDevices   ;="Devices:"
 ;           CALL OutputZString  ;Output message at DE
             CALL HW_MsgDevs     ;Output device list
-            JR   @Exit
-@NotDevLst:
+            JR   .Exit
+.NotDevLst:
 ; Other system message?
             LD   E,A            ;Get message number
             LD   D,0
@@ -723,24 +780,24 @@ OutputMessage:
             LD   D,(HL)
             LD   E,A
             CALL OutputZString  ;Output message as DE
-@Exit:      POP  HL             ;Restore HL
+.Exit:      POP  HL             ;Restore HL
             POP  DE             ;Restore DE
             RET
 
 ; Output version number A.D.E
 OutputVers: PUSH AF             ;Preserve revision number
             LD   A,D            ;Get major version number
-            CALL @OutputN       ;Output number
-            CALL @OutputDot     ;Output '.'
+            CALL .OutputN       ;Output number
+            CALL .OutputDot     ;Output '.'
             LD   A,E            ;Get major version number
-            CALL @OutputN       ;Output number
-            CALL @OutputDot     ;Output '.'
+            CALL .OutputN       ;Output number
+            CALL .OutputDot     ;Output '.'
             POP  AF             ;Restore revision number
 ; Output one numbnerical value
-@OutputN:   ADD  A,'0'          ;Convert to ASCII
+.OutputN:   ADD  A,'0'          ;Convert to ASCII
             JP   OutputChar     ;Output ASCII character
 ; Output '.'
-@OutputDot: LD   A,'.'          ;Get character '.'
+.OutputDot: LD   A,'.'          ;Get character '.'
             JP   OutputChar     ;Outputcharacter '.'
 
 
@@ -751,9 +808,9 @@ OutputVers: PUSH AF             ;Preserve revision number
 ;               A != 0 and NZ flagged
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
 SetBaud:    CP   0x0A           ;Identifier is a hex letter?
-            JR   C,@GotNum      ;No, so skip
+            JR   C,.GotNum      ;No, so skip
             SUB  0x09           ;Convert 0x0A/B to 0x01/2
-@GotNum:    LD   C,A            ;Get device identifier (0x01 to 0x06)
+.GotNum:    LD   C,A            ;Get device identifier (0x01 to 0x06)
             LD   A,E            ;Get baud rate code
 ; Set baud rate for device C (1 to 6) to baud code A
             JP   HW_SetBaud     ;Failure: A=0 and Z flagged
@@ -800,7 +857,15 @@ MsgTabSys:  .DW  szNull         ;00 = null
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iMemTop:    .DW  0              ;Top of free memory address
 

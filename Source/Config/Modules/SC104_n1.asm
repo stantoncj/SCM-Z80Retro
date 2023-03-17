@@ -12,20 +12,20 @@
 ; controlled by a CTC
 
 ; Z80 SIO #1 with standard register order
-#IFNDEF     INCLUDE_SIO_n1_std
-kSIO1:      .SET 0x80           ;Base address of serial Z80 SIO #1
-kSIO1ACTC:  .SET kCTC1+0        ;Port A's CTC register (0 if n/a)
-kSIO1BCTC:  .SET kCTC1+1        ;Port B's CTC register (0 if n/a)
-#DEFINE     INCLUDE_SIO_n1_std  ;Include SIO #1 with Standard register order
-#ENDIF
+	IFNDEF INCLUDE_SIO_n1_std
+kSIO1      = 0x80           ;Base address of serial Z80 SIO #1
+kSIO1ACTC  = kCTC1+0        ;Port A's CTC register (0 if n/a)
+kSIO1BCTC  = kCTC1+1        ;Port B's CTC register (0 if n/a)
+	DEFINE+ INCLUDE_SIO_n1_std ;Include SIO #1 with Standard register order
+	ENDIF
 
 ; Z80 SIO #1 with RC2014 register order
-#IFNDEF     INCLUDE_SIO_n1_rc
-kSIO1:      .SET 0x80           ;Base address of serial Z80 SIO #1
-kSIO1ACTC:  .SET kCTC1+0        ;Port A's CTC register (0 if n/a)
-kSIO1BCTC:  .SET kCTC1+1        ;Port B's CTC register (0 if n/a)
-#DEFINE     INCLUDE_SIO_n1_rc   ;Include SIO #1 with RC2014 register order
-#ENDIF
+	IFNDEF INCLUDE_SIO_n1_rc
+kSIO1      = 0x80           ;Base address of serial Z80 SIO #1
+kSIO1ACTC  = kCTC1+0        ;Port A's CTC register (0 if n/a)
+kSIO1BCTC  = kCTC1+1        ;Port B's CTC register (0 if n/a)
+	DEFINE+ INCLUDE_SIO_n1_rc ;Include SIO #1 with RC2014 register order
+	ENDIF
 
 
 

@@ -8,83 +8,91 @@
 ; **  Z180 register constants
 ; **********************************************************************
 
-kZ180:      .EQU kZ180Base      ;Z180 internal register base address
+kZ180      = kZ180Base      ;Z180 internal register base address
 
-CNTLA0:     .EQU kZ180 + 0x00   ;ASCI Channel Control Register A chan 0
-CNTLA1:     .EQU kZ180 + 0x01   ;ASCI Channel Control Register A chan 1
-CNTLB0:     .EQU kZ180 + 0x02   ;ASCI Channel Control Register B chan 0
-CNTLB1:     .EQU kZ180 + 0x03   ;ASCI Channel Control Register B chan 1
-STAT0:      .EQU kZ180 + 0x04   ;ASCI Status Register channel 0
-STAT1:      .EQU kZ180 + 0x05   ;ASCI Status Register channel 1
-TDR0:       .EQU kZ180 + 0x06   ;ASCI Transmit Data Register channel 0
-TDR1:       .EQU kZ180 + 0x07   ;ASCI Transmit Data Register channel 1
-RDR0:       .EQU kZ180 + 0x08   ;ASCI Receive Register channel 0
-RDR1:       .EQU kZ180 + 0x09   ;ASCI Receive Register channel 1
-CNTR:       .EQU kZ180 + 0x0A   ;CSI/O Contol/Status Register
-TRDR:       .EQU kZ180 + 0x0B   ;CSI/O Transmit/Receive Data Register
-TMDR0L:     .EQU kZ180 + 0x0C   ;Timer Data Register Channel 0 Low
-TMDR0H:     .EQU kZ180 + 0x0D   ;Timer Data Register Channel 0 High
-RLDR0L:     .EQU kZ180 + 0x0E   ;Timer Reload Register Channel 0 Low
-RLDR0H:     .EQU kZ180 + 0x0F   ;Timer Reload Register Channel 0 High
-TCR:        .EQU kZ180 + 0x10   ;Timer Control Register
+CNTLA0     = kZ180 + 0x00   ;ASCI Channel Control Register A chan 0
+CNTLA1     = kZ180 + 0x01   ;ASCI Channel Control Register A chan 1
+CNTLB0     = kZ180 + 0x02   ;ASCI Channel Control Register B chan 0
+CNTLB1     = kZ180 + 0x03   ;ASCI Channel Control Register B chan 1
+STAT0      = kZ180 + 0x04   ;ASCI Status Register channel 0
+STAT1      = kZ180 + 0x05   ;ASCI Status Register channel 1
+TDR0       = kZ180 + 0x06   ;ASCI Transmit Data Register channel 0
+TDR1       = kZ180 + 0x07   ;ASCI Transmit Data Register channel 1
+RDR0       = kZ180 + 0x08   ;ASCI Receive Register channel 0
+RDR1       = kZ180 + 0x09   ;ASCI Receive Register channel 1
+CNTR       = kZ180 + 0x0A   ;CSI/O Contol/Status Register
+TRDR       = kZ180 + 0x0B   ;CSI/O Transmit/Receive Data Register
+TMDR0L     = kZ180 + 0x0C   ;Timer Data Register Channel 0 Low
+TMDR0H     = kZ180 + 0x0D   ;Timer Data Register Channel 0 High
+RLDR0L     = kZ180 + 0x0E   ;Timer Reload Register Channel 0 Low
+RLDR0H     = kZ180 + 0x0F   ;Timer Reload Register Channel 0 High
+TCR        = kZ180 + 0x10   ;Timer Control Register
 
-ASCI0:      .EQU kZ180 + 0x12   ; ASCI Extension Control Register 0
-ASCI1:      .EQU kZ180 + 0x13   ; ASCI Extension Control Register 1
-TMDR1L:     .EQU kZ180 + 0x14   ;Timer Data Register Channel 1 Low
-TMDR1H:     .EQU kZ180 + 0x15   ;Timer Data Register Channel 1 High
-RLDR1L:     .EQU kZ180 + 0x16   ;Timer Reload Register Channel 1 Low
-RLDR1H:     .EQU kZ180 + 0x17   ;Timer Reload Register Channel 1 High
-FRC:        .EQU kZ180 + 0x18   ;Free Running Counter (read only)
+ASCI0      = kZ180 + 0x12   ; ASCI Extension Control Register 0
+ASCI1      = kZ180 + 0x13   ; ASCI Extension Control Register 1
+TMDR1L     = kZ180 + 0x14   ;Timer Data Register Channel 1 Low
+TMDR1H     = kZ180 + 0x15   ;Timer Data Register Channel 1 High
+RLDR1L     = kZ180 + 0x16   ;Timer Reload Register Channel 1 Low
+RLDR1H     = kZ180 + 0x17   ;Timer Reload Register Channel 1 High
+FRC        = kZ180 + 0x18   ;Free Running Counter (read only)
 
-ASTC0L:     .EQU kZ180 + 0x1A   ;ASCI Time Constant Register ch 0 Low
-ASTC0H:     .EQU kZ180 + 0x1B   ;ASCI Time Constant Register ch 0 High
-ASTC1L:     .EQU kZ180 + 0x1C   ;ASCI Time Constant Register ch 1 Low
-ASTC1H:     .EQU kZ180 + 0x1D   ;ASCI Time Constant Register ch 1 High
-CMR:        .EQU kZ180 + 0x1E   ;Clock Multiplier Register
-CCR         .EQU kZ180 + 0x1F   ;CPU Control Register
-SAR0L:      .EQU kZ180 + 0x20   ;DMA Source Address Register ch 0 Low
-SAR0H:      .EQU kZ180 + 0x21   ;DMA Source Address Register ch 0 High
-SAR0B:      .EQU kZ180 + 0x22   ;DMA Source Address Register ch 0 B
-DAR0L:      .EQU kZ180 + 0x23   ;DMA Destination Address Reg ch 0 Low
-DAR0H:      .EQU kZ180 + 0x24   ;DMA Destination Address Reg ch 0 High
-DAR0B:      .EQU kZ180 + 0x25   ;DMA Destination Address Reg ch 0 B
-BCR0L:      .EQU kZ180 + 0x26   ;DMA Byte Count Register channel 0 Low
-BCR0H:      .EQU kZ180 + 0x27   ;DMA Byte Count Register channel 0 High
-MAR1L:      .EQU kZ180 + 0x28   ;DMA Memory Address Register ch 1 Low
-MAR1H:      .EQU kZ180 + 0x29   ;DMA Memory Address Register ch 1 High
-MAR1B:      .EQU kZ180 + 0x2A   ;DMA Memory Address Register ch 1 B
-IAR1L:      .EQU kZ180 + 0x2B   ;DMA I/O Address Register channel 1 Low
-IAR1H:      .EQU kZ180 + 0x2C   ;DMA I/O Address Register channel 1 High
-IAR1B:      .EQU kZ180 + 0x2D   ;DMA I/O Address Register channel 1 B
-BCR1L:      .EQU kZ180 + 0x2E   ;DMA Byte Count Register channel 1 Low
-BCR1H:      .EQU kZ180 + 0x2F   ;DMA Byte Count Register channel 1 High
-DSTAT:      .EQU kZ180 + 0x30   ;DMA Status Register
-DMODE:      .EQU kZ180 + 0x31   ;DMA Mode Register
-DCNTL:      .EQU kZ180 + 0x32   ;DMA/WAIT Control Register
-IL:         .EQU kZ180 + 0x33   ;Interrupt Vector Register
-ITC:        .EQU kZ180 + 0x34   ;INT/TRAP Control Register
+ASTC0L     = kZ180 + 0x1A   ;ASCI Time Constant Register ch 0 Low
+ASTC0H     = kZ180 + 0x1B   ;ASCI Time Constant Register ch 0 High
+ASTC1L     = kZ180 + 0x1C   ;ASCI Time Constant Register ch 1 Low
+ASTC1H     = kZ180 + 0x1D   ;ASCI Time Constant Register ch 1 High
+CMR        = kZ180 + 0x1E   ;Clock Multiplier Register
+CCR         = kZ180 + 0x1F   ;CPU Control Register
+SAR0L      = kZ180 + 0x20   ;DMA Source Address Register ch 0 Low
+SAR0H      = kZ180 + 0x21   ;DMA Source Address Register ch 0 High
+SAR0B      = kZ180 + 0x22   ;DMA Source Address Register ch 0 B
+DAR0L      = kZ180 + 0x23   ;DMA Destination Address Reg ch 0 Low
+DAR0H      = kZ180 + 0x24   ;DMA Destination Address Reg ch 0 High
+DAR0B      = kZ180 + 0x25   ;DMA Destination Address Reg ch 0 B
+BCR0L      = kZ180 + 0x26   ;DMA Byte Count Register channel 0 Low
+BCR0H      = kZ180 + 0x27   ;DMA Byte Count Register channel 0 High
+MAR1L      = kZ180 + 0x28   ;DMA Memory Address Register ch 1 Low
+MAR1H      = kZ180 + 0x29   ;DMA Memory Address Register ch 1 High
+MAR1B      = kZ180 + 0x2A   ;DMA Memory Address Register ch 1 B
+IAR1L      = kZ180 + 0x2B   ;DMA I/O Address Register channel 1 Low
+IAR1H      = kZ180 + 0x2C   ;DMA I/O Address Register channel 1 High
+IAR1B      = kZ180 + 0x2D   ;DMA I/O Address Register channel 1 B
+BCR1L      = kZ180 + 0x2E   ;DMA Byte Count Register channel 1 Low
+BCR1H      = kZ180 + 0x2F   ;DMA Byte Count Register channel 1 High
+DSTAT      = kZ180 + 0x30   ;DMA Status Register
+DMODE      = kZ180 + 0x31   ;DMA Mode Register
+DCNTL      = kZ180 + 0x32   ;DMA/WAIT Control Register
+IL         = kZ180 + 0x33   ;Interrupt Vector Register
+ITC        = kZ180 + 0x34   ;INT/TRAP Control Register
 
-RCR:        .EQU kZ180 + 0x36   ;Refresh Control Register
+RCR        = kZ180 + 0x36   ;Refresh Control Register
 
-CBR:        .EQU kZ180 + 0x38   ;MMU Control Base Register
-BBR:        .EQU kZ180 + 0x39   ;MMU Bank Base Register
-CBAR:       .EQU kZ180 + 0x3A   ;MMU Common/Bank Register
+CBR        = kZ180 + 0x38   ;MMU Control Base Register
+BBR        = kZ180 + 0x39   ;MMU Bank Base Register
+CBAR       = kZ180 + 0x3A   ;MMU Common/Bank Register
 
-OMCR:       .EQU kZ180 + 0x3E   ;Operation Mode Control Register
-ICR:        .EQU kZ180 + 0x3F   ;I/O Control Register
+OMCR       = kZ180 + 0x3E   ;Operation Mode Control Register
+ICR        = kZ180 + 0x3F   ;I/O Control Register
 
 ; **********************************************************************
 ; Serial status register bits
 
-ST_RDRF:    .EQU 7              ;Receive data register Full
-ST_TDRE:    .EQU 1              ;Transmit data register empty
+ST_RDRF    = 7              ;Receive data register Full
+ST_TDRE    = 1              ;Transmit data register empty
 
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 Z180Init:   
 
@@ -246,7 +254,7 @@ Z180Init:
 ; 1ms event needs processing.
 H_PollT2:   IN0  A,(TMDR0H)
             IN0  A,(TCR)
-            AND  A,0x40
+            AND  0x40
             RET
 
 
@@ -254,9 +262,25 @@ H_PollT2:   IN0  A,(TMDR0H)
 ; **  Public workspace (in RAM)                                       **
 ; **********************************************************************
 
-;           .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-;           .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 

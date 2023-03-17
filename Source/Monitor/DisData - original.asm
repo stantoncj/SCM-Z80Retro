@@ -1,21 +1,21 @@
-kDisSubsL:	.EQU 13	;Last operand substitution string
-kDisSubNN:	.EQU 4	;Operand substitution string 'nn'
-kDisSubC:	.EQU 10	;Operand substitution string 'c'
-kDisSubCC:	.EQU 11	;Operand substitution string 'cc'
-kDisBracHL:	.EQU 21	;Bracketed HL
-kDisHL:	.EQU 24	;HL
-kDisFlowF:	.EQU 27	;First flow control instructions
-kDisFlowL:	.EQU 34	;Last flow control instructions
-kDisJR:	.EQU 27	;Operation string 'JR'
-kDisDJNZ:	.EQU 28	;Operation string 'DJNZ'
-kDisRST:	.EQU 29	;Operation string 'RST'
-kDisJP:	.EQU 30	;Operation string 'JP'
-kDisCALL:	.EQU 31	;Operation string 'CALL'
-kDisRET:	.EQU 32	;Operation string 'RET'
-kDisOpMask:	.EQU 0x3F	;Operand 1 mask to exclude pre-code bits
-kDisMskC:	.EQU 0x18	;Condition bit mask for Operand 1 = C
-kDisMskCC:	.EQU 0x38	;Condition bit mask for Operand 1 = CC
-kDisMskRST:	.EQU 0x38	;Restart address bits
+kDisSubsL	= 13	;Last operand substitution string
+kDisSubNN	= 4	;Operand substitution string 'nn'
+kDisSubC	= 10	;Operand substitution string 'c'
+kDisSubCC	= 11	;Operand substitution string 'cc'
+kDisBracHL	= 21	;Bracketed HL
+kDisHL	= 24	;HL
+kDisFlowF	= 27	;First flow control instructions
+kDisFlowL	= 34	;Last flow control instructions
+kDisJR	= 27	;Operation string 'JR'
+kDisDJNZ	= 28	;Operation string 'DJNZ'
+kDisRST	= 29	;Operation string 'RST'
+kDisJP	= 30	;Operation string 'JP'
+kDisCALL	= 31	;Operation string 'CALL'
+kDisRET	= 32	;Operation string 'RET'
+kDisOpMask	= 0x3F	;Operand 1 mask to exclude pre-code bits
+kDisMskC	= 0x18	;Condition bit mask for Operand 1 = C
+kDisMskCC	= 0x38	;Condition bit mask for Operand 1 = CC
+kDisMskRST	= 0x38	;Restart address bits
 
 DisString:
 	.DB  0x80                              	;String 0x01 = 

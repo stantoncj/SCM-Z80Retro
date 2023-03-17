@@ -38,41 +38,49 @@
 ; **  Constants                                                       **
 ; **********************************************************************
 
-#IFNDEF     BREAKPOINT
-#DEFINE     BREAKPOINT 28       ;Breakpoint restart (08|10|18|20|28|30)
-#ENDIF
+	IFNDEF BREAKPOINT
+	DEFINE+ BREAKPOINT "28" ;Breakpoint restart (08|10|18|20|28|30)
+	ENDIF
 
-#IF         BREAKPOINT = "08"
-kBPOpcode:  .EQU 0xCF           ;Breakpoint restart = RST 0x08
-kBPAddress: .EQU 0x08           ;Breakpoint restart address = 0x0008
-#ENDIF
-#IF         BREAKPOINT = "10"
-kBPOpcode:  .EQU 0xD7           ;Breakpoint restart = RST 0x10
-kBPAddress: .EQU 0x10           ;Breakpoint restart address = 0x0010
-#ENDIF
-#IF         BREAKPOINT = "18"
-kBPOpcode:  .EQU 0xDF           ;Breakpoint restart = RST 0x18
-kBPAddress: .EQU 0x18           ;Breakpoint restart address = 0x0018
-#ENDIF
-#IF         BREAKPOINT = "20"
-kBPOpcode:  .EQU 0xE7           ;Breakpoint restart = RST 0x20
-kBPAddress: .EQU 0x20           ;Breakpoint restart address = 0x0020
-#ENDIF
-#IF         BREAKPOINT = "28"
-kBPOpcode:  .EQU 0xEF           ;Breakpoint restart = RST 0x28
-kBPAddress: .EQU 0x28           ;Breakpoint restart address = 0x0028
-#ENDIF
-#IF         BREAKPOINT = "30"
-kBPOpcode:  .EQU 0xF7           ;Breakpoint restart = RST 0x30
-kBPAddress: .EQU 0x30           ;Breakpoint restart address = 0x0030
-#ENDIF
+	IF BREAKPOINT = "08"
+kBPOpcode  = 0xCF           ;Breakpoint restart = RST 0x08
+kBPAddress = 0x08           ;Breakpoint restart address = 0x0008
+	ENDIF
+	IF BREAKPOINT = "10"
+kBPOpcode  = 0xD7           ;Breakpoint restart = RST 0x10
+kBPAddress = 0x10           ;Breakpoint restart address = 0x0010
+	ENDIF
+	IF BREAKPOINT = "18"
+kBPOpcode  = 0xDF           ;Breakpoint restart = RST 0x18
+kBPAddress = 0x18           ;Breakpoint restart address = 0x0018
+	ENDIF
+	IF BREAKPOINT = "20"
+kBPOpcode  = 0xE7           ;Breakpoint restart = RST 0x20
+kBPAddress = 0x20           ;Breakpoint restart address = 0x0020
+	ENDIF
+	IF BREAKPOINT = "28"
+kBPOpcode  = 0xEF           ;Breakpoint restart = RST 0x28
+kBPAddress = 0x28           ;Breakpoint restart address = 0x0028
+	ENDIF
+	IF BREAKPOINT = "30"
+kBPOpcode  = 0xF7           ;Breakpoint restart = RST 0x30
+kBPAddress = 0x30           ;Breakpoint restart address = 0x0030
+	ENDIF
 
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Breakpoint: Initialise this module
 ;   On entry: No parameters required
@@ -81,17 +89,17 @@ BPInitialise:
             CALL BPClear        ;Clear breakpoint from memory
             CALL BPReqClr       ;Clear requested breakpoint address
             LD   HL,kBPAddress  ;Address of breakpoint restart
-#IFDEF      ROM_ONLY
+	IFDEF ROM_ONLY
             .DW  0,0,0,0        ;Padding to other code does not move
             .DB  0
-#ELSE
+	ELSE
             LD   (HL),0xC3      ;Write JP instruction at restart
             INC  HL             ;Increment address pointer
             LD   DE,BPHandler   ;Write address of breakpoint handler
             LD   (HL),E         ;  at restart...
             INC  HL             ;  Should use LD (HL),BPHandler/256 etc
             LD   (HL),D         ;  but homebrew assembler fails at that
-#ENDIF
+	ENDIF
             RET                 ;  TODO fix the assembler!
 
 
@@ -125,26 +133,26 @@ BPHandler:
             LD   D,H            ;  ie. PC=BP 
             LD   HL,(iBPAddr)
             CP   L              ;LSBytes equal
-            JR   NZ,@Trap       ;No, so TRAP
+            JR   NZ,.Trap       ;No, so TRAP
             LD   A,D
             CP   H              ;MSBytes equal
-            JR   NZ,@Trap       ;No, so TRAP
+            JR   NZ,.Trap       ;No, so TRAP
 ; A Restart 28 instruction was encountered at the breakpoint addr
             CALL BPClear
             LD   A,(iBPType)    ;Get breakpoint type
             OR   A              ;Type 0 = Once?
-            JR   NZ,@Reg        ;No, so may be single stepping
+            JR   NZ,.Reg        ;No, so may be single stepping
             LD   DE,szBreak     ;Point to message "Breakpoint"
-            JR   @Msg
+            JR   .Msg
 ; A Restart 28 instruction was encountered but not the breakpoint
-@Trap:      LD   DE,szTrap      ;Point to message "Trap"
-@Msg:       CALL OutputZString  ;Output message
+.Trap:      LD   DE,szTrap      ;Point to message "Trap"
+.Msg:       CALL OutputZString  ;Output message
 ; Output register values as they were at the breakpoint
-@Reg:       CALL WrRegister1    ;Build primary register line
+.Reg:       CALL WrRegister1    ;Build primary register line
             CALL StrPrint       ;Output primary register line
             ;CALL WrRegister2   ;Build secondary register line
             ;CALL StrPrint      ;Output secondary register line
-#IFDEF      IncludeDisassemble
+	IFDEF IncludeDisassemble
 ; Disassemble this instruction and output it
 ; Stack pointer now same value as it was before the breakpoint's restart
             LD   A,(iBPType)    ;Get breakpoint type
@@ -166,23 +174,23 @@ BPHandler:
 ; Also we trap the end of user program when it returns to monitor
 ;           LD   A,H            ;Get hi byte of address of next inst
 ;           OR   A              ;Is next inst in bottom 256 bytes?
-;           JR   Z,@StepOver    ;Yes, so step over this instruction
+;           JR   Z,.StepOver    ;Yes, so step over this instruction
             CALL BPIsInMonitor  ;Next instruction within monitor code?
-            JR   Z,@StepOver    ;Yes, so step over this instruction
+            JR   Z,.StepOver    ;Yes, so step over this instruction
 ; Attempt to follow this instruction (ie. follow jumps etc)
             CALL BPSet          ;Attempt to set breakpoint here
-            JR   Z,@SetOK       ;Set ok (ie in RAM) so skip
+            JR   Z,.SetOK       ;Set ok (ie in RAM) so skip
 ; Attempt to step over this instruction (ie. don't follow jumps etc)
 ; as we can't step through ROM code or reliably through monitor code
-@StepOver:  LD   H,D            ;Get address after this instruction
+.StepOver:  LD   H,D            ;Get address after this instruction
             LD   L,E            ;  as we can't step into ROM
             LD   DE,szOver
             CALL OutputZString  ;Output "Stepping over..."
             CALL BPSet          ;Attempt to set breakpoint here
             RET  NZ             ;Abort as failed so set (not in RAM)
 ; Brakpoint set for next step ok
-@SetOK:
-#ELSE
+.SetOK:
+	ELSE
 ; No disassembler so just display address and hex bytes
 ; Stack pointer now same value as it was before the breakpoint's restart
             CALL StrInitDefault ;Initialise default string buffer
@@ -193,11 +201,11 @@ BPHandler:
             LD   A,4            ;Get length of instruction 
             LD   B,A
             LD   L,A
-@Loop:      CALL StrWrSpace
+.Loop:      CALL StrWrSpace
             LD   A,(DE)         ;Read byte at PC
             CALL StrWrHexByte
             INC  DE
-            DJNZ @Loop
+            DJNZ .Loop
             LD   A,5            ;TAB cursor..
             SUB  L
             LD   L,A
@@ -209,7 +217,7 @@ BPHandler:
             CALL StrWrNewLine
             CALL StrPrint       ;Print to output device
             RET
-#ENDIF
+	ENDIF
 ; Restore state of processor
 ; Stack pointer now same value as it was before the breakpoint's restart
 BPRestore:  LD   A,(iIR+1)      ;Get value or I register
@@ -284,11 +292,11 @@ BPSet:      CALL BPClear        ;Ensure previous breakpoint removed
             LD   (HL),kBPOpcode ;Write breakpoint opcode to address
             LD   A,(HL)         ;Read back to see if in RAM
             CP   kBPOpcode      ;Is it the breakpoint opcode?
-            JR   NZ,@Failure    ;No, so failed to set
+            JR   NZ,.Failure    ;No, so failed to set
             LD   (iBPAddr),HL   ;Store requested breakpoint address
             XOR  A              ;Return success A = 0 and Z flagged
             RET
-@Failure:   LD   A,0xFF         ;Return failure A != 0 and NZ flagged
+.Failure:   LD   A,0xFF         ;Return failure A != 0 and NZ flagged
             OR   A
             RET
 
@@ -302,16 +310,16 @@ BPClear:    PUSH AF
             LD   A,L            ;Test if breakpoint address is 0xFFFF
             AND  H              ;If it is 0xFFFF then breakpoint is not set
             CP   0xFF           ;Breakpoint set?
-            JR   Z,@ClrData     ;No, so skip breakpoint clear
+            JR   Z,.ClrData     ;No, so skip breakpoint clear
             LD   A,(HL)         ;Test if breakpoint contains breakpoint opcode
             CP   kBPOpcode      ;If it is then breakpoint is not set
-            JR   NZ,@ClrAddr    ;No, so skip breakpoint clear
+            JR   NZ,.ClrAddr    ;No, so skip breakpoint clear
 ; Breakpoint is currently set, so restore memory contents and clear BP
             LD   A,(iBPData)    ;Restore original contents of memory at current
             LD   (HL),A         ;  breakpoint address to remove breakpoint opcode
-@ClrAddr:   LD   HL,0xFFFF      ;Get value indicating break address is not set
+.ClrAddr:   LD   HL,0xFFFF      ;Get value indicating break address is not set
             LD   (iBPAddr),HL   ;Store as breakpoint address to incicate not set
-@ClrData:   LD   A,kBPOpcode    ;Get value indicating break data is not set
+.ClrData:   LD   A,kBPOpcode    ;Get value indicating break data is not set
             LD   (iBPData),A    ;Store as breakpoint data to incicate not set
             POP HL
             POP AF
@@ -359,7 +367,15 @@ szOver:     .DB  "Stepping over code in ROM or in monitor",kNewLine,kNull
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iBPAddr:    .DW  0x0000         ;Breakpoint address
 iBPData:    .DB  0x00           ;Breakpoint data (contents of BP address)

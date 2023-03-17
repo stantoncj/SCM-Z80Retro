@@ -97,15 +97,23 @@
 ; **********************************************************************
 
 ; Fixed address to allow external code to use this data
-kTrFileRe2: .EQU 0xFFD0         ;Transient file reference
-kTrFileRef: .EQU 0xFFE0         ;Transient file reference
+kTrFileRe2 = 0xFFD0         ;Transient file reference
+kTrFileRef = 0xFFE0         ;Transient file reference
 
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Initialise the ROM filing system
 ;   On entry: No parameters required
@@ -117,12 +125,12 @@ RomInitialise:
             CALL RomEcho        ;Mask out ROM banks which are echos
 ; Auto run any suitably flagged files
             CALL RomSearchInit
-@Loop:      CALL RomSearchNext
+.Loop:      CALL RomSearchNext
             RET  NZ
             LD   A,(kTrFileRef+0x0A)
             BIT  7,A            ;Autorun?
             CALL NZ,RomRun      ;Execute this file
-            JR   @Loop
+            JR   .Loop
 
 
 ; Determine which ROM banks are real and which are echos
@@ -152,29 +160,29 @@ RomEcho:    LD   A,0            ;Bank zero
             LD   A,1            ;Bank one
             LD   L,0xF0         ;First reference in bank
             CALL RomGetRef      ;Read reference to RAM
-            CALL @RomComp       ;Compare banks
-            JR   NZ,@Test2      ;Not the same so skip
+            CALL .RomComp       ;Compare banks
+            JR   NZ,.Test2      ;Not the same so skip
             LD   A,0b00001010   ;Banks 1 and 3 are echos
             LD   (iRomMap),A    ;Store echoed bank flags
-@Test2:     LD   A,2            ;Bank two
+.Test2:     LD   A,2            ;Bank two
             LD   L,0xF0         ;First reference in bank
             CALL RomGetRef      ;Read reference to RAM
-            CALL @RomComp       ;Compare banks
+            CALL .RomComp       ;Compare banks
             RET  NZ             ;Not the same so finished
             LD   A,(iRomMap)    ;Get echoed flag bits so far
             OR   0b00001100     ;Banks 2 and 3 are echos
             LD   (iRomMap),A    ;Store echoed bank flags
             RET
 ; Compare file reference from two banks to check for ROM echo
-@RomComp:   LD   B,16           ;Compare 16 bytes
+.RomComp:   LD   B,16           ;Compare 16 bytes
             LD   HL,kTrFileRef  ;First file reference
             LD   DE,kTrFileRe2  ;Second file reference
-@Loop:      LD   A,(DE)         ;Compare byte from each...
+.Loop:      LD   A,(DE)         ;Compare byte from each...
             CP   (HL)
             RET  NZ             ;Not the same so return NZ flagged
             INC  HL
             INC  DE
-            DJNZ @Loop          ;Repeat for all 16 bytes
+            DJNZ .Loop          ;Repeat for all 16 bytes
             RET                 ;Same so return Z flagged
 
 
@@ -215,18 +223,18 @@ RomSearchNext:
             INC  A              ;Valid file?
             RET  Z              ;Yes, so return with Z flagged
 ; Select next ROM bank
-@NextBank:  LD   A,(iRomBank)   ;Get current ROM bank
+.NextBank:  LD   A,(iRomBank)   ;Get current ROM bank
             INC  A              ;Point to next ROM bank
             LD   B,A            ;Remember ROM bank for later
             LD   (iRomBank),A   ;Store new ROM bank
-            AND  A,kROMBanks    ;Finished all ROM banks?
+            AND  kROMBanks    ;Finished all ROM banks?
             RET  NZ             ;Yes, so end with NZ flagged
             LD   C,0x01         ;Prepare bit mask for this bank
-@Rotate:    RLC  C              ;Rotate bit mask 'B' times
-            DJNZ @Rotate        ;  Bit 1 set for bank 1 etc
+.Rotate:    RLC  C              ;Rotate bit mask 'B' times
+            DJNZ .Rotate        ;  Bit 1 set for bank 1 etc
             LD   A,(iRomMap)    ;Bit maps of ROM bank echos
             AND  C              ;Test if current bank is an echo
-            JR   NZ,@NextBank   ;Skip this bank if it is an echo
+            JR   NZ,.NextBank   ;Skip this bank if it is an echo
             XOR  A              ;First reference in ROM
             LD   (iRomRefLo),A  ;Store new reference address
             JR   RomSearchNext  ;Go consider next file reference
@@ -248,37 +256,37 @@ RomGetPtr:  LD   DE,(iRomTemp)  ;Get pointer to command line
 ;             IX IY I AF' BC' DE' HL' preserved
 RomExFile:  LD   (iRomTemp),DE  ;Store start of command string
             CALL RomSearchInit
-@NextFile:  CALL RomSearchNext  ;Find next file reference
+.NextFile:  CALL RomSearchNext  ;Find next file reference
             RET  NZ             ;End of ROM files so exit
             LD   A,(kTrFileRef+0x0A)  ;Get type
             AND  0x0F           ;Remove flag bits
             CP   1              ;Monitor command?
-            JR   Z,@GotFile     ;Yes, so go check name
+            JR   Z,.GotFile     ;Yes, so go check name
             CP   2              ;Executable code?
-            JR   NZ,@NextFile   ;No, so go look for next file
+            JR   NZ,.NextFile   ;No, so go look for next file
 ; Found executable file so see if the file name is a match
-@GotFile:   LD   DE,(iRomTemp)  ;Get start of command string
+.GotFile:   LD   DE,(iRomTemp)  ;Get start of command string
             LD   HL,kTrFileRef+2  ;Get pointer to file name
             LD   B,8            ;Maximum length
-@Compare:   LD   A,(HL)         ;Character from ROM
+.Compare:   LD   A,(HL)         ;Character from ROM
             CP   kSpace         ;Space?
-            JR   Z,@Check       ;Yes, so possible match
+            JR   Z,.Check       ;Yes, so possible match
             CALL ConvertCharToUCase
             LD   C,A            ;Store char from ROM in UCase
             LD   A,(DE)         ;Get char from command name
             CP   kSpace+1       ;<= Space?
-            JR   C,@NextFile    ;Yes, so too short
+            JR   C,.NextFile    ;Yes, so too short
             CALL ConvertCharToUCase
             CP   C              ;Matching character?
-            JR   NZ,@NextFile   ;No, so no match
+            JR   NZ,.NextFile   ;No, so no match
             INC  HL             ;Point ot next char in ROM
             INC  DE             ;Point ot next char in command
-            DJNZ @Compare       ;Loop until max characters
+            DJNZ .Compare       ;Loop until max characters
             JR   RomRun         ;Match, so run the file
 ; Check we are also at end of command name
-@Check:     LD   A,(DE)         ;Get char from command name
+.Check:     LD   A,(DE)         ;Get char from command name
             CP   kSpace+1       ;<= Space?
-            JR   NC,@NextFile   ;Yes, so too long
+            JR   NC,.NextFile   ;Yes, so too long
             LD   (iRomTemp),DE  ;Update sommand line pointer
             ;JR   RomRun        ;Match, so run the file
 ;
@@ -286,15 +294,15 @@ RomExFile:  LD   (iRomTemp),DE  ;Store start of command string
 ; WARNING: Call here RomInitialise for autorun function
 RomRun:     LD   A,(kTrFileRef+0x0A)  ;Get file type
             BIT  6,A            ;Move code first
-            JR   NZ,@Move       ;No, so go move code
+            JR   NZ,.Move       ;No, so go move code
 ; Execute direct from ROM
             LD   A,(iRomBank)   ;Get code's ROM bank
             LD   DE,(kTrFileRef+0x0C) ;Get start address
             CALL HW_ExecROM     ;Run the executable
-@Return:    XOR  A              ;Executed file, so return
+.Return:    XOR  A              ;Executed file, so return
             RET                 ;  A=0 and Z flagged
 ; Move code to RAM before running it
-@Move:      LD   HL,(kTrFileRef+0x0C) ;Get start address
+.Move:      LD   HL,(kTrFileRef+0x0C) ;Get start address
             LD   BC,(kTrFileRef+0x0E) ;Get length address
             LD   A,(kTrFileRef+0x0B)  ;Get destination MSB
             LD   D,A            ;Set destination MSB
@@ -304,7 +312,7 @@ RomRun:     LD   A,(kTrFileRef+0x0A)  ;Get file type
             LD   A,(kTrFileRef+0x0B)  ;Get destination MSB
             LD   H,A            ;Set destination MSB
             LD   L,0            ;Set destination LSB to zero
-            LD   BC,@Return     ;Get return address
+            LD   BC,.Return     ;Get return address
             PUSH BC             ;Push return address onto stack
             JP   (HL)           ;Execute at start address
 
@@ -374,7 +382,15 @@ RomGetRef:  LD   A,(kaRomTop)   ;Hi byte of reference address (kROMTop)
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iRomBank:   .DB  0x00
 iRomRefLo:  .DB  0x00

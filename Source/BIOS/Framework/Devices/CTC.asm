@@ -24,27 +24,43 @@
 ; Bit 0 = Control/vestor: 1 = control, 0 = vector
 
 ; Externally definitions required:
-;kDevBase:  .EQU 0x88           ;Base address of Z80 CTC
-;kDevFlags: .SET 0b00010000     ;Hardware flags = CTC #1
-;kDevTick:  .SET 3              ;Channel (0 to 3) for 200Hz tick
+;kDevBase  = 0x88           ;Base address of Z80 CTC
+;kDevFlags = 0b00010000     ;Hardware flags = CTC #1
+;kDevTick  = 3              ;Channel (0 to 3) for 200Hz tick
 
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
 ; SCM BIOS framework interface descriptor
 
             .DB  0              ;Device ID code (not currently used)
-            .DW  @String        ;Pointer to device string
-            .DW  @CTC_Init      ;Pointer to initialisation code
+            .DW  .String        ;Pointer to device string
+            .DW  .CTC_Init      ;Pointer to initialisation code
             .DB  kDevFlags      ;Hardware flags bit mask
-            .DW  @CTC_Set       ;Point to device settings code
+            .DW  .CTC_Set       ;Point to device settings code
             .DB  0              ;Number of console devices
-@String:    .DB  "Z80 CTC "
+.String:    .DB  "Z80 CTC "
             .DB  "@ "
-            .HEXCHAR kDevBase \ 16
-            .HEXCHAR kDevBase & 15
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kDevBase / 16")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kDevBase & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
             .DB  kNull
 
 
@@ -56,15 +72,15 @@
 ;             AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; If the device is found it is initialised
-@CTC_Init:  CALL @CTC_Test      ;Returns NZ if CTC found
-            JR   NZ,@Found      ;Skip of found
+.CTC_Init:  CALL .CTC_Test      ;Returns NZ if CTC found
+            JR   NZ,.Found      ;Skip of found
 ; Device has not been detected
-            OR   A,0xFF         ;Return not found (NZ flagged)
+            OR   0xFF         ;Return not found (NZ flagged)
             RET
 ; Device has been detected so initialise it
 ; Set specified channel to generate a 200 Hz clock tick
-@Found:
-#IFDEF      CTC_CLK_7372800
+.Found:
+	IFDEF CTC_CLK_7372800
 ; Generate 200 Hz clock tick from CPU clock of 7.3728 MHz
 ; This uses timer mode to select the CPU clock as the source
 ; Channel at <kDevTick> is set for 200Hz interval, interrupt not enabled
@@ -72,8 +88,8 @@
             OUT  (kDevTick),A   ;Write channel's control register
             LD   A,144          ;28800Hz/144 = 200 Hz
             OUT  (kDevTick),A   ;Write channel's time base
-#ENDIF
-#IFDEF      CTC_CLK_1843200
+	ENDIF
+	IFDEF CTC_CLK_1843200
 ; Generate 200 Hz clock tick from local oscillator of 1.8432 MHz
 ; This uses counter mode to select the local oscillator as the source
 ; Two channels must be daisy chained to get 200Hz from 1.8432MHz as
@@ -88,7 +104,7 @@
             OUT  (kDevTick+1),A ;Write channel's control register
             LD   A,144          ;Count: 28800Hz/144 = 200 Hz
             OUT  (kDevTick+1),A ;Write channel's time base
-#ENDIF
+	ENDIF
             XOR  A              ;Return Z flag as device found
             RET
 
@@ -97,14 +113,14 @@
 ; The test sets CTC channel 3 for fast counting and checks the 
 ; counter changes within a limited time
 ; Returns NZ is CTC is present
-@CTC_Test:  LD   C,kDevBase+3   ;Channel 3's address
+.CTC_Test:  LD   C,kDevBase+3   ;Channel 3's address
             LD   A,0b0010101    ;Timer: 7372800Hz/16 = 460kHz (2.2us)
             OUT  (C),A          ;Write to channel's control register
 ;           LD   A,<n>          ;460kHz/n = ? (n > 10 or so will do)
             OUT  (C),A          ;Write to channel's time base
             IN   A,(C)          ;Get 1st timer value
             LD   B,20           ;Delay
-@Wait:      DJNZ @Wait          ;  by 10us or so
+.Wait:      DJNZ .Wait          ;  by 10us or so
             LD   B,A            ;Store 1st timer value
             IN   A,(C)          ;Get 2nd timer value
             CP   B              ;Same? (same = no count occured)
@@ -119,14 +135,14 @@
 ;               A != 0 and NZ flagged
 ;             BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
-@CTC_Set:   XOR  A              ;Return failure as no setting supported
+.CTC_Set:   XOR  A              ;Return failure as no setting supported
             RET
 
 
 ; **********************************************************************
 ; Only include the CTC baud rate setting code once
-#IFNDEF     CTC_BAUD
-#DEFINE     CTC_BAUD
+	IFNDEF CTC_BAUD
+	DEFINE+ CTC_BAUD 
 ; Set CTC to generate baud rate clock for SIO
 ;   On entry: B = Baud rate code (1 to 12)
 ;             C = CTC register address
@@ -138,7 +154,7 @@
 ; Search for baud rate in table
 ; B = Baud rate code  (1 to 12)
 ; C = CTC register address
-CTC_Baud:   LD   HL,@TimeCon-1  ;Start of time constant list (-1)
+CTC_Baud:   LD   HL,.TimeCon-1  ;Start of time constant list (-1)
             LD   E,B            ;Baud rate code (1 to 12)
             LD   D,0
             ADD  HL,DE          ;Calculate table location
@@ -146,16 +162,16 @@ CTC_Baud:   LD   HL,@TimeCon-1  ;Start of time constant list (-1)
 ; B = Baud code (1 to 12)
 ; C = CTC register address
 ; (HL) = Time constant value for CTC
-@GotIt:     LD   A,0x55         ;Control register for baud rates
+.GotIt:     LD   A,0x55         ;Control register for baud rates
             OUT  (C),A          ;Write to CTC control register
             LD   A,(HL)         ;Get time constant
             OUT  (C),A          ;Write to time constant register
             LD   A,B            ;Get baud rate code (1 to 11)
             CP   7              ;Less than 7? (= baud rate > 9600)
             LD   D,64           ;Return SIO divide by 64 request
-            JR   NC,@Return     ;No, so skip with divide 64 request
+            JR   NC,.Return     ;No, so skip with divide 64 request
             LD   D,16           ;Return SIO divide by 16 request
-@Return:    OR   0xFF           ;Return success (A=0xFF and NZ flagged)
+.Return:    OR   0xFF           ;Return success (A=0xFF and NZ flagged)
             RET
 
 ; Time constant table (7.3728 MHz)
@@ -176,8 +192,8 @@ CTC_Baud:   LD   HL,@TimeCon-1  ;Start of time constant list (-1)
 ;  |     600  |  11 or 0x60  |               |           96  |
 ;  |     300  |  12 or 0x30  |               |          192  |
 ;  +----------+--------------+---------------+---------------+
-#IFDEF      CTC_CLK_7372800
-@TimeCon:   .DB  1              ; 1 = 230400 baud
+	IFDEF CTC_CLK_7372800
+.TimeCon:   .DB  1              ; 1 = 230400 baud
             .DB  2              ; 2 = 115200 baud
             .DB  4              ; 3 =  57600 baud
             .DB  6              ; 4 =  38400 baud
@@ -189,9 +205,9 @@ CTC_Baud:   LD   HL,@TimeCon-1  ;Start of time constant list (-1)
             .DB  48             ;10 =   1200 baud
             .DB  96             ;11 =    600 baud
             .DB  192            ;12 =    300 baud
-#ENDIF
-#IFDEF      CTC_CLK_1843200
-@TimeCon:   .DB  1              ; 1 = 230400 baud  n/a
+	ENDIF
+	IFDEF CTC_CLK_1843200
+.TimeCon:   .DB  1              ; 1 = 230400 baud  n/a
             .DB  1              ; 2 = 115200 baud
             .DB  2              ; 3 =  57600 baud
             .DB  3              ; 4 =  38400 baud
@@ -204,8 +220,8 @@ CTC_Baud:   LD   HL,@TimeCon-1  ;Start of time constant list (-1)
             .DB  48             ;11 =    600 baud
             .DB  96             ;12 =    300 baud
             ;.DB  0x15, 192      ;13 =    150 baud
-#ENDIF
-#ENDIF
+	ENDIF
+	ENDIF
 
 
 ; **********************************************************************

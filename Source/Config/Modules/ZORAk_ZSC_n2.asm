@@ -6,10 +6,10 @@
 ; This card contains a Zilog Z85C50 SCC
 ; These settings assume the main bus clock is 7.3728 MHz
 
-#IFNDEF     INCLUDE_SCC_n2
-kSCC2:      .EQU 0x20           ;Base address of ZORAk_ZSC #2
-#DEFINE     INCLUDE_SCC_n2      ;Include SCC #2 support in this build
-#ENDIF
+	IFNDEF INCLUDE_SCC_n2
+kSCC2      = 0x20           ;Base address of ZORAk_ZSC #2
+	DEFINE+ INCLUDE_SCC_n2 ;Include SCC #2 support in this build
+	ENDIF
 
 
 

@@ -6,7 +6,7 @@
 ; This card contains a Z80 CPU with clock speed options
 
 ; Processor
-#DEFINE     PROCESSOR Z80       ;Processor type "Z80", "Z180"
-kCPUClock:  .SET 7432800        ;CPU clock speed in Hz
+	DEFINE+ PROCESSOR "Z80" ;Processor type "Z80", "Z180"
+kCPUClock  = 7432800        ;CPU clock speed in Hz
 
 

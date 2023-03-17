@@ -40,33 +40,49 @@
 ;   I/O address 0x1A = 0b00000000 (0x00)   All pins are output
 ;
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Interface descriptor
             .DB  0              ;Device ID code (not currently used)
-            .DW  @String        ;Pointer to device string
+            .DW  .String        ;Pointer to device string
             .DW  L16x2_Init     ;Pointer to initialisation code
             .DB  kL16x2Flags    ;Hardware flags bit mask
             .DW  L16x2_Set      ;Point to device settings code
             .DB  1              ;Number of console devices
             .DW  L16x2_RxA      ;Pointer to 1st channel input code
             .DW  L16x2_TxA      ;Pointer to 1st channel output code
-@String:    .DB  "LCD 16x2 "
+.String:    .DB  "LCD 16x2 "
             .DB  "@ "
-            .HEXCHAR kL16x2Base \ 16
-            .HEXCHAR kL16x2Base & 15
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kL16x2Base / 16")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kL16x2Base & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
             .DB  kNull
 
 
 ; PIO constants used by this code module
-kDataReg:   .EQU 0x68           ;PIO port A data register
-kContReg:   .EQU 0x6A           ;PIO port A control register
+kDataReg   = 0x68           ;PIO port A data register
+kContReg   = 0x6A           ;PIO port A control register
 
 ; LCD constants used by this code module
-kLCDPrt:    .EQU kDataReg       ;LCD port is the PIO port A data reg
-kLCDBitRS:  .EQU 2              ;Port bit for LCD RS signal
-kLCDBitE:   .EQU 3              ;Port bit for LCD E signal
-kLCDWidth:  .EQU 20             ;Width in characters
+kLCDPrt    = kDataReg       ;LCD port is the PIO port A data reg
+kLCDBitRS  = 2              ;Port bit for LCD RS signal
+kLCDBitE   = 3              ;Port bit for LCD E signal
+kLCDWidth  = 20             ;Width in characters
 
 
 ; Initialise
@@ -93,13 +109,13 @@ L16x2_Init:
 ; Display text on first line
             LD   A, kLCD_Line1
             CALL fLCD_Pos       ;Position cursor to location in A
-            LD   DE, @MsgHello
+            LD   DE, .MsgHello
             CALL fLCD_Str       ;Display string pointed to by DE
 ; Initialisation complete
             XOR  A              ;Flag success
             RET                 ;  and return
 ;
-@MsgHello:  .DB  "Hello World!",0
+.MsgHello:  .DB  "Hello World!",0
 
 
 ; Input character
@@ -121,12 +137,12 @@ L16x2_RxA:
 L16x2_TxA:
             PUSH AF
             CP   ' '            ;Control character?
-            JR   NC,@Tx         ;No, so go output it
+            JR   NC,.Tx         ;No, so go output it
             LD   A, kLCD_Clear  ;Display clear instruction
             CALL fLCD_Inst      ;Send instruction
-            JR   @Exit
-@Tx:        CALL fLCD_Data      ;Write character to display
-@Exit:      POP  AF
+            JR   .Exit
+.Tx:        CALL fLCD_Data      ;Write character to display
+.Exit:      POP  AF
             JP   kJumpTab+0x33  ;Output to console device 1
 
 
@@ -214,23 +230,23 @@ aReadJumpTab:
 ; **********************************************************************
 
 ; Cursor position values for the start of each line
-kLCD_Line1: .EQU 0x00 
-kLCD_Line2: .EQU 0x40 
-kLCD_Line3: .EQU kLCD_Line1+kLCDWidth
-kLCD_Line4: .EQU kLCD_Line1+kLCDWidth 
+kLCD_Line1 = 0x00 
+kLCD_Line2 = 0x40 
+kLCD_Line3 = kLCD_Line1+kLCDWidth
+kLCD_Line4 = kLCD_Line1+kLCDWidth 
 
 ; Instructions to send as A register to fLCD_Inst
-kLCD_Clear: .EQU 0b00000001     ;LCD clear
-kLCD_Off:   .EQU 0b00001000     ;LCD off
-kLCD_On:    .EQU 0b00001100     ;LCD on, no cursor or blink
-kLCD_Under: .EQU 0b00001110     ;LCD on, cursor = underscore
-kLCD_Blink: .EQU 0b00001101     ;LCD on, cursor = blink block
-kLCD_Both:  .EQU 0b00001111     ;LCD on, cursor = under+blink
+kLCD_Clear = 0b00000001     ;LCD clear
+kLCD_Off   = 0b00001000     ;LCD off
+kLCD_On    = 0b00001100     ;LCD on, no cursor or blink
+kLCD_Under = 0b00001110     ;LCD on, cursor = underscore
+kLCD_Blink = 0b00001101     ;LCD on, cursor = blink block
+kLCD_Both  = 0b00001111     ;LCD on, cursor = under+blink
 
 ; Constants used by this code module
-;kLCD_Clr:  .EQU 0b00000001     ;LCD command: Clear display
-kLCD_Pos:   .EQU 0b10000000     ;LCD command: Position cursor
-kLCD_Def:   .EQU 0b01000000     ;LCD command: Define character
+;kLCD_Clr  = 0b00000001     ;LCD command Clear display
+kLCD_Pos   = 0b10000000     ;LCD command Position cursor
+kLCD_Def   = 0b01000000     ;LCD command Define character
 
 
 ; Initialise alphanumeric LCD module
@@ -273,18 +289,18 @@ fLCD_Init:  LD   A, 40
 ;   On exit:  AF BC DE HL IX IY I AF' BC' DE' HL' preserved
 fLCD_Inst:  PUSH AF
             PUSH AF
-            CALL @Wr4bits       ;Write bits 4 to 7 of instruction
+            CALL .Wr4bits       ;Write bits 4 to 7 of instruction
             POP  AF
             RLA                 ;Rotate bits 0-3 into bits 4-7...
             RLA
             RLA
             RLA
-            CALL @Wr4bits       ;Write bits 0 to 3 of instruction
+            CALL .Wr4bits       ;Write bits 0 to 3 of instruction
             LD   A, 2
             CALL LCDDelay       ;Delay 2 ms to complete 
             POP  AF
             RET
-@Wr4bits:   AND  0xF0           ;Mask so we only have D4 to D7
+.Wr4bits:   AND  0xF0           ;Mask so we only have D4 to D7
             OUT  (kLCDPrt), A   ;Output with E=Low and RS=Low
             SET  kLCDBitE, A
             OUT  (kLCDPrt), A   ;Output with E=High and RS=Low
@@ -298,19 +314,19 @@ fLCD_Inst:  PUSH AF
 ;   On exit:  AF BC DE HL IX IY I AF' BC' DE' HL' preserved
 fLCD_Data:  PUSH AF
             PUSH AF
-            CALL @Wr4bits       ;Write bits 4 to 7 of data byte
+            CALL .Wr4bits       ;Write bits 4 to 7 of data byte
             POP  AF
             RLA                 ;Rotate bits 0-3 into bits 4-7...
             RLA
             RLA
             RLA
-            CALL @Wr4bits       ;Write bits 0 to 3 of data byte
+            CALL .Wr4bits       ;Write bits 0 to 3 of data byte
             LD   A, 150
-@Wait:      DEC  A              ;Wait a while to allow data 
-            JR   NZ, @Wait      ;  write to complete
+.Wait:      DEC  A              ;Wait a while to allow data 
+            JR   NZ, .Wait      ;  write to complete
             POP  AF
             RET
-@Wr4bits:   AND  0xF0           ;Mask so we only have D4 to D7
+.Wr4bits:   AND  0xF0           ;Mask so we only have D4 to D7
             SET  kLCDBitRS, A
             OUT  (kLCDPrt), A   ;Output with E=Low and RS=High
             SET  kLCDBitE, A
@@ -358,12 +374,12 @@ fLCD_Def:   PUSH BC
             OR   kLCD_Def       ;Prepare define character instruction
             CALL fLCD_Inst      ;Write instruction to LCD
             LD   B, 0
-@Loop:      LD   A, (DE)        ;Get byte from bitmap
+.Loop:      LD   A, (DE)        ;Get byte from bitmap
             CALL fLCD_Data      ;Write byte to display
             INC  DE             ;Point to next byte
             INC  B              ;Count bytes
             BIT  3, B           ;Finish all 8 bytes?
-            JR   Z, @Loop       ;No, so repeat
+            JR   Z, .Loop       ;No, so repeat
             POP  AF
             INC  A              ;Increment character number
             POP  BC
@@ -404,7 +420,15 @@ LCDDelay:   PUSH DE
 ; **  Variables
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 ; No variables used
 

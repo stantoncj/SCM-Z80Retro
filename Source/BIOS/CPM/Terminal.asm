@@ -6,7 +6,15 @@
 
 ; The terminal is logically two devices: input and output
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; Terminal initialise
@@ -20,7 +28,7 @@ Terminal_Initialise:
             RET
 
 
-#IFDEF      NOCHANCE
+	IFDEF NOCHANCE
 
 
 ; Terminal input character
@@ -32,9 +40,9 @@ Terminal_InputChar:
 ;           LD   A,(iSimWait)   ;Get waiting character
 ;           OR   A              ;Is there a character?
 ;           RET  NZ             ;Yes, so return
-@Wait:      IN   A,(TermIn)     ;Read from input device
+.Wait:      IN   A,(TermIn)     ;Read from input device
             OR   A              ;Is there a character available?
-;           JR   Z,@Wait        ;No, so keep trying
+;           JR   Z,.Wait        ;No, so keep trying
             RET
 
 
@@ -52,7 +60,7 @@ Terminal_OutputChar:
             RET
 
 
-#ELSE
+	ELSE
 
 
 ; Terminal input character
@@ -95,14 +103,22 @@ Terminal_OutputChar:
             RET
 
 
-#ENDIF
+	ENDIF
 
 
 ; **********************************************************************
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************

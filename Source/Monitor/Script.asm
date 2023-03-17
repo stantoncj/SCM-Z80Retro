@@ -69,7 +69,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Initialise script module
 ;   On entry: No parameters required
@@ -110,7 +118,7 @@ ScrOld:     LD  HL,(iScrStart)  ;Point to first line of program
 ;   On entry: No parameters required
 ;   On exit:  IX IY I AF' BC' DE' HL' preserved
 ScrList:    CALL ScrSetStart
-@Line:      LD   A,(HL)
+.Line:      LD   A,(HL)
             OR   A
             RET  Z
 ; Output current line
@@ -126,37 +134,37 @@ ScrList:    CALL ScrSetStart
             INC  HL
             LD   A,(HL)
             BIT  7,A
-            JR   Z,@Text
+            JR   Z,.Text
 ; Output token
             RES  7,A
             CALL ScrFindString
             LD   A,(HL)
             AND  0x7F
-@Token:     CALL StrWrChar
+.Token:     CALL StrWrChar
             INC  HL
             LD   A,(HL)
             BIT  7,A
-            JR   NZ,@EndOfLine
-            JR   @Token
+            JR   NZ,.EndOfLine
+            JR   .Token
 ; Not a token
-@Text:      CP   kSemicolon
-            JR   Z,@Comment
+.Text:      CP   kSemicolon
+            JR   Z,.Comment
             CP   kColon
-            JR   NZ,@EndOfLine
+            JR   NZ,.EndOfLine
 ; Output comment or label
-@Comment:   CALL StrWrChar
+.Comment:   CALL StrWrChar
             INC  HL
             LD   A,(HL)
             OR   A
-            JR   NZ,@Comment
+            JR   NZ,.Comment
 
 
 ;           POP  HL
 
-@EndOfLine: CALL StrWrNewLine
+.EndOfLine: CALL StrWrNewLine
             CALL StrPrint
             CALL ScrNextLine
-            JR   @Line
+            JR   .Line
 
 
 ; Script: Edit line
@@ -170,16 +178,16 @@ ScrEdit:    LD   B,H
             CALL CLISkipDelimiter
             LD   A,(DE)
             OR   A              ;Blank line entered?
-            JR   Z,@Delete      ;Yes, so go delete line
+            JR   Z,.Delete      ;Yes, so go delete line
 
 ; Find end of program
-@Next:      LD   A,(HL)
+.Next:      LD   A,(HL)
             OR   A
-            JR   Z,@Append
+            JR   Z,.Append
             CALL ScrNextLine
-            JR   @Next
+            JR   .Next
 ; Append line
-@Append:    PUSH DE
+.Append:    PUSH DE
             PUSH HL
             CALL ScrTokenise
             POP  HL
@@ -192,20 +200,20 @@ ScrEdit:    LD   B,H
             LD   (HL),B
             INC  HL
             LD   B,3            ;Initial line length
-@Copy:      LD   A,(DE)
+.Copy:      LD   A,(DE)
             LD   (HL),A
             INC  DE
             INC  HL
             INC  B
             OR   A
-            JR   NZ,@Copy
+            JR   NZ,.Copy
 ; Line written to program
-@Done:      LD   (HL),A         ;Terminate program
+.Done:      LD   (HL),A         ;Terminate program
             POP  HL
             LD   (HL),B         ;Write length to line
             RET
 ; Delete line
-@Delete:    CALL ScrFindLine
+.Delete:    CALL ScrFindLine
             RET
 
 
@@ -233,9 +241,9 @@ ScrNextLine:
             LD   A,(HL)         ;Get length of line
             ADD  L              ;Add to start of line...
             LD   L,A
-            JR   NC,@Done
+            JR   NC,.Done
             INC  H
-@Done:      LD   (iScrLine),HL  ;Store start of 'next' line
+.Done:      LD   (iScrLine),HL  ;Store start of 'next' line
             RET
 
 
@@ -246,20 +254,20 @@ ScrNextLine:
 ;   On exit:  NZ flagged if found
 ;             HL = iScrLine = Address of start of line
 ScrFindLine:
-@Next:      LD   A,(HL)         ;Get length of line
+.Next:      LD   A,(HL)         ;Get length of line
             OR   A              ;End of program?
             RET  Z              ;Yes, so return as line not found
             INC  HL             ;Point to line number lo byte
             LD   A,(HL)         ;Get line number lo byte
             CP   C              ;Compare with lo byte of target line
-            JR   NZ,@Find       ;Not the same so go try next line
+            JR   NZ,.Find       ;Not the same so go try next line
             INC  HL             ;Point to line number hi byte
             LD   A,(HL)         ;Get line number hi byte
             CP   B              ;Compare with hi byte of target line
-            JR   Z,@Found       ;Same so we've found the line
-@Find:      CALL ScrNextLine    ;Find start of next line
-            JR   @Next          ;Loop until done
-@Found:     LD   HL,(iScrLine)  ;Get start address of this line
+            JR   Z,.Found       ;Same so we've found the line
+.Find:      CALL ScrNextLine    ;Find start of next line
+            JR   .Next          ;Loop until done
+.Found:     LD   HL,(iScrLine)  ;Get start address of this line
             LD   A,0xFF         ;Found so return NZ
             OR   A
             RET
@@ -285,13 +293,13 @@ ScrTokenise:
             CALL SearchStringListNA
             POP  HL
             POP  DE
-            JR   Z,@Error
+            JR   Z,.Error
             SET  7,A            ;Turn string number into token
             LD   (HL),A         ;Store token in program memory
             INC  HL
             LD   (HL),0         ;Mark end of tokenised string
             RET
-@Error:     RET
+.Error:     RET
 
 
 
@@ -306,10 +314,10 @@ ScrFindString:
             PUSH BC
             LD   HL,ScrNameList-1 ;Start of string table - 1
             LD   B,A            ;Get string number
-@Next:      INC  HL             ;Point to next character
+.Next:      INC  HL             ;Point to next character
             BIT  7,(HL)         ;Start of new string?
-            JR   Z,@Next        ;No, so go get next character
-            DJNZ @Next          ;Loop back if not the right string
+            JR   Z,.Next        ;No, so go get next character
+            DJNZ .Next          ;Loop back if not the right string
             POP  BC
             POP  AF
             RET
@@ -331,7 +339,15 @@ ScrNameList:
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iScrStart:  .DW  0              ;Start of script program
 iScrLine:   .DW  0              ;Start of current line

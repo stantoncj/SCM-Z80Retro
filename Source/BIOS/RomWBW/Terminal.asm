@@ -6,7 +6,15 @@
 
 ; The terminal is logically two devices: input and output
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; Terminal initialise
@@ -33,12 +41,12 @@ Terminal_InputChar:
             LD   C,0            ;Unit number 0 = first serial port
             RST  8              ;Call HBIOS
             OR   A              ;Any characters available
-            JR   Z,@Exit        ;No, so exit
+            JR   Z,.Exit        ;No, so exit
             LD   B,0            ;HBIOS fn 0 = CIOIN (char input)
             LD   C,0            ;Unit number 0 = first serial port
             RST  8              ;Call HBIOS
             LD   A,E            ;Character received
-@Exit:      POP  HL
+.Exit:      POP  HL
             POP  DE
             POP  BC
             OR   A              ;Is there a character available?
@@ -71,7 +79,15 @@ Terminal_OutputChar:
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************

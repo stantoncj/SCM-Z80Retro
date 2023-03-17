@@ -11,7 +11,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; **********************************************************************
 ; Get configuration name and date
@@ -45,15 +53,37 @@ C_GetInfo:  LD  A,kConfHardw    ;A = Hardware identifier
 ; advantage of the system and monitor code being the same binary image,
 ; except for the few default setting bytes starting at 0x0040.
 
-szCDate:    #DB  CDATE          ; Build date. eg: "20190627"
+szCDate:    .DB  CDATE          ; Build date. eg: "20190627"
             .DB  kNull
 
-            .ORG szCDate + 9    ;Fixed space allocated for date
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("szCDate+9")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("szCDate+9")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-szCName:    #DB  CNAME          ; Configuration name. eg: "SC126"
+szCName:    .DB  CNAME          ; Configuration name. eg: "SC126"
             .DB  kNull
 
-            .ORG szCName + 12   ;Fixed space allocated for name
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("szCName+12")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("szCName+12")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************

@@ -4,16 +4,29 @@
 ; **  Developed with Small Computer Workshop (IDE)     www.scc.me.uk  **
 ; **********************************************************************
 
+; Processed by scw2sjasm to modify code from SCWorkshop to sjasmplus on Fri Mar 17 17:07:34 EDT 2023
+;
+; Initialize .CODE and .DATA PC
+	LUA ALLPASS
+		code_pc = 0
+		data_pc = 0
+		in_code = true
+		build_dir = "./build/"
+	ENDLUA
+
+	DEVICE NOSLOT64K
+	SLDOPT COMMENT WPMEM, LOGPOINT, ASSERTION
+
 ; **********************************************************************
 ; Options (comment out any that are not required)
 
-#DEFINE     xBUILD_AS_COM_FILE  ;Build as CP/M style .COM file (not as ROM)
+	DEFINE+ xBUILD_AS_COM_FILE ;Build as CP/M style .COM file (not as ROM)
 
 ; **********************************************************************
 ; Only one build configuration can be defined so comment out the others
 
 ; Tested with this version of SCM code
-#INCLUDE    Config\config_F1_SC516_118.asm  ;F1, "Z50Bus/Z80",  as SC516 & SC118
+	INCLUDE Config/config_F1_SC516_118.asm ;F1, "Z50Bus/Z80", as SC516 & SC118
 ;#INCLUDE   Config\config_F2_SC519.asm         ;F2, "Z50Bus/Z80",  as SC519+518
 ;#INCLUDE   Config\config_F3_SC503_140.asm     ;F3, "Z50Bus/Z180", as SC503 & SC140
 ;#INCLUDE   Config\config_S2_SC114.asm         ;S2, "RC/Z80",      as SC114

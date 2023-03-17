@@ -18,7 +18,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; API: Main entry point
 ;   On entry: C = Function number
@@ -91,19 +99,19 @@ APITable:   .DW  SysReset       ; 0x00 = System reset
             .DW  HW_RdRAM       ; 0x2A = Read banked RAM
             .DW  HW_WrRAM       ; 0x2B = Write banked RAM
 
-kAPILast:   .EQU 0x2B           ;Last API function number
+kAPILast   = 0x2B           ;Last API function number
 
 
 ; Dummy entry points for unsupported features
-#IFNDEF     IncludeRomFS
+	IFNDEF IncludeRomFS
 RomGetPtr:  ; 0x23 = Get pointer to command line
-#ENDIF
-#IFNDEF     IncludeMonitor
+	ENDIF
+	IFNDEF IncludeMonitor
 M_Execute:  ; 0x22 = Execute command line
 M_SkipDeli: ; 0x24 = Skip delimiter
 M_SkipNone: ; 0x25 = Skip non-delimiter
 M_GetHexPa: ; 0x26 = Get hex parameter
-#ENDIF
+	ENDIF
             RET
 
 

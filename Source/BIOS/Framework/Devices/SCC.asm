@@ -13,33 +13,49 @@
 ; SCC too complex to reproduce technical info here. See SCC datasheet
 
 ; Externally definitions required:
-;kSCCBase:  .EQU kSCC1         ;I/O base address
-;kSCCBCont: .SET kSCCBase+0     ;I/O address of control register B
-;kSCCACont: .SET kSCCBase+1     ;I/O address of control register A
-;kSCCBData: .SET kSCCBase+2     ;I/O address of data register B
-;kSCCAData: .SET kSCCBase+3     ;I/O address of data register A
+;kSCCBase  = kSCC1         ;I/O base address
+;kSCCBCont = kSCCBase+0     ;I/O address of control register B
+;kSCCACont = kSCCBase+1     ;I/O address of control register A
+;kSCCBData = kSCCBase+2     ;I/O address of data register B
+;kSCCAData = kSCCBase+3     ;I/O address of data register A
 
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 
 ; **********************************************************************
 ; SCM BIOS framework interface descriptor
 
             .DB  0              ;Device ID code (not currently used)
-            .DW  @String        ;Pointer to device string
-            .DW  @SCC_Init      ;Pointer to initialisation code
+            .DW  .String        ;Pointer to device string
+            .DW  .SCC_Init      ;Pointer to initialisation code
             .DB  kSCCFlags      ;Hardware flags bit mask
-            .DW  @SCC_Set       ;Point to device settings code
+            .DW  .SCC_Set       ;Point to device settings code
             .DB  2              ;Number of console devices
-            .DW  @SCC_RxA       ;Pointer to 1st channel input code
-            .DW  @SCC_TxA       ;Pointer to 1st channel output code
-            .DW  @SCC_RxB       ;Pointer to 2nd channel input code
-            .DW  @SCC_TxB       ;Pointer to 2nd channel output code
-@String:    .DB  "SCC "
+            .DW  .SCC_RxA       ;Pointer to 1st channel input code
+            .DW  .SCC_TxA       ;Pointer to 1st channel output code
+            .DW  .SCC_RxB       ;Pointer to 2nd channel input code
+            .DW  .SCC_TxB       ;Pointer to 2nd channel output code
+.String:    .DB  "SCC "
             .DB  "@ "
-            .HEXCHAR kSCCBase \ 16
-            .HEXCHAR kSCCBase & 15
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kSCCBase / 16")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
+;	HEXCHAR - Output hex digit from value
+	LUA ALLPASS
+		digit = _c(" kSCCBase & 15")
+		if (digit<10) then _pc('DB '..48+digit) else _pc('DB '..55+digit) end
+	ENDLUA
             .DB  kNull
 
 
@@ -50,7 +66,7 @@
 ;             AF BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; If the device is found it is initialised
-@SCC_Init:
+.SCC_Init:
 ; First look to see if the device is present
 ; Test 1, just read from chip, do not write anything
             IN   A,(kSCCACont)  ;Read status (control) register A
@@ -81,13 +97,13 @@
 ;   On exit:  A = Character input from the device
 ;             NZ flagged if a character has been found
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@SCC_RxA:
+.SCC_RxA:
             IN   A,(kSCCACont)  ;Address of status register
             BIT  0,A            ;Receive byte available
             RET  Z              ;Return Z if no character
             IN   A,(kSCCAData)  ;Read data byte
             RET
-@SCC_RxB:
+.SCC_RxB:
             IN   A,(kSCCBCont)  ;Address of status register
             BIT  0,A            ;Receive byte available
             RET  Z              ;Return Z if no character
@@ -103,7 +119,7 @@
 ;             If character output failed (eg. device busy)
 ;               Z flagged and A = Character to output
 ;             BC DE HL IX IY I AF' BC' DE' HL' preserved
-@SCC_TxA:
+.SCC_TxA:
             PUSH BC
             LD   C,kSCCACont    ;ACIA control register
             IN   B,(C)          ;Read ACIA control register
@@ -113,7 +129,7 @@
             OUT  (kSCCAData),A  ;Write data byte
             OR   0xFF           ;Return success A=0xFF and NZ flagged
             RET
-@SCC_TxB:
+.SCC_TxB:
             PUSH BC
             LD   C,kSCCBCont    ;ACIA control register
             IN   B,(C)          ;Read ACIA control register
@@ -136,8 +152,8 @@
 ;             BC DE HL not specified
 ;             IX IY I AF' BC' DE' HL' preserved
 ; Baud rate codes are 1 to 12 (1 = 230400 baud, ... , 12 = 300 baud)
-@SCC_Set:   CP   1              ;Baud rate?
-            JR   NZ,@Failed     ;No, so go return failure
+.SCC_Set:   CP   1              ;Baud rate?
+            JR   NZ,.Failed     ;No, so go return failure
 ; WARNING: We assume serial port A is an odd numbered console device
 ;          and serial port B is an even numbered console device
 ; Determine which serial port is being set
@@ -146,17 +162,17 @@
             LD   A,C            ;Get console device number (1 to 6)
             AND  1              ;SCC port A ?            *** WARNING ***
             LD   A,kSCCACont    ;Control register address for port A
-            JR   NZ,@GotReg     ;Yes, port A, so skip
+            JR   NZ,.GotReg     ;Yes, port A, so skip
             LD   A,kSCCBCont    ;Control register address for port B
 ; Look up time constant for this baud rate
 ; A = Control register address
 ; B = Baud rate code (1 to 12)
 ; C = Console device number (1 to 6)
-@GotReg:    LD   C,A            ;Control register address
-            LD   HL,@TimeCon-2  ;Start of time constant list (-2)
-@Step:      INC  HL             ;Increment pointer
+.GotReg:    LD   C,A            ;Control register address
+            LD   HL,.TimeCon-2  ;Start of time constant list (-2)
+.Step:      INC  HL             ;Increment pointer
             INC  HL             ;  to next time constant value
-            DJNZ @Step          ;Repeat until found
+            DJNZ .Step          ;Repeat until found
             LD   E,(HL)         ;Get time constant lo byte
             INC  HL
             LD   D,(HL)         ;Get time constant hi byte
@@ -171,7 +187,7 @@
             OUT  (C),D          ;Set time constant hi byte
             OR   0xFF           ;Return success (A=0xFF and NZ flagged)
             RET
-@Failed:    XOR  A              ;Return failure (A=0 and Z flagged)
+.Failed:    XOR  A              ;Return failure (A=0 and Z flagged)
             RET                 ;Abort as invalid baud rate
 
 ; Time constant table
@@ -203,7 +219,7 @@
 ;  |     600  |  11 or 0x60  |         6144  |         6142  |
 ;  |     300  |  12 or 0x30  |        12288  |        12286  |
 ;  +----------+--------------+---------------+---------------+
-@TimeCon:   .DW  14             ; 1 = 230400 baud
+.TimeCon:   .DW  14             ; 1 = 230400 baud
             .DW  30             ; 2 = 115200 baud
             .DW  62             ; 3 =  57600 baud
             .DW  94             ; 4 =  38400 baud
@@ -219,8 +235,8 @@
 
 ; **********************************************************************
 ; Only include the SIO initialisation code once
-#IFNDEF     SCC_INIT
-#DEFINE     SCC_INIT
+	IFNDEF SCC_INIT
+	DEFINE+ SCC_INIT 
 ; Write initialisation data to SCC
 ;   On entry: C = Control register I/O address
 ;   On exit:  DE IX IY I AF' BC' DE' HL' preserved
@@ -249,7 +265,7 @@ SCCIniData: .DB   0,0b00000000  ; Wr 0  Pointer to R0 + clear other bits
             .DB   3,0b11000001  ; Wr 3  Enable Rx, 8 bit 
             .DB   5,0b11101000  ; Wr 5  Enable Tx, 8 bit    >>>>68
 SCCIniDataEnd:
-#ENDIF
+	ENDIF
 
 
 ; **********************************************************************

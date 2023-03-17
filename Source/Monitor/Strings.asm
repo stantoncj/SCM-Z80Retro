@@ -45,7 +45,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; String: Append specified string to current string buffer
 ;   On entry: DE = Start of string to be appended
@@ -56,13 +64,13 @@ StrAppend:
             PUSH DE
             LD   A,(DE)         ;Get length of specified string
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done
+            JR   Z,.Done        ;Yes, so we're done
             LD   B,A            ;Store length of string
-@Next:      INC  DE             ;Point to next character to append
+.Next:      INC  DE             ;Point to next character to append
             LD   A,(DE)         ;Get character from specified string
             CALL StrWrChar      ;Write character to current string
-            DJNZ @Next          ;Loop back if more character
-@Done:      POP  DE
+            DJNZ .Next          ;Loop back if more character
+.Done:      POP  DE
             POP  BC
             POP  AF
             RET
@@ -89,14 +97,14 @@ StrCopyToZ:
             LD   HL,(iStrStart) ;Get start of current string buffer
             LD   A,(HL)         ;Get length of string
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done here
+            JR   Z,.Done        ;Yes, so we're done here
             INC  HL             ;Point to first character in string
             PUSH BC
             LD   C,A            ;Store length of string
             LD   B,0
             LDIR                ;Copy string from HL to DE
             POP  BC
-@Done:      XOR  A
+.Done:      XOR  A
             LD   (DE),A         ;Terminate string with null
             POP  HL
             POP  DE
@@ -137,10 +145,10 @@ StrInitialise:
             PUSH AF
             PUSH DE
             OR   A              ;Buffer length zero?
-            JR   NZ,@Init       ;No, so go use supplied values
+            JR   NZ,.Init       ;No, so go use supplied values
             LD   DE,kStrBuffer  ;Get start of default buffer
             LD   A,kStrSize     ;Get size of default buffer
-@Init:      LD   (iStrStart),DE ;Store start of string buffer
+.Init:      LD   (iStrStart),DE ;Store start of string buffer
             LD   (iStrSize),A   ;Store size of string buffer
             XOR  A              ;Prepare for length zero
             LD   (DE),A         ;Initialise string with length zero
@@ -158,7 +166,7 @@ StrPrint:
             PUSH DE
             LD   DE,(iStrStart) ;Get start of current string buffer
             CALL StrPrintDE     ;Print string at DE
-@Done:      POP  DE
+.Done:      POP  DE
             RET
 
 
@@ -172,20 +180,20 @@ StrPrintDE:
             PUSH DE
             LD   A,(DE)         ;Get length of specified string
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done
+            JR   Z,.Done        ;Yes, so we're done
             LD   B,A            ;Store length of string
-@Next:      INC  DE             ;Point to next character to append
+.Next:      INC  DE             ;Point to next character to append
             LD   A,(DE)         ;Get character from specified string
             CALL OutputChar     ;Output character to output device
-            DJNZ @Next          ;Loop back if more character
-@Done:      POP  DE
+            DJNZ .Next          ;Loop back if more character
+.Done:      POP  DE
             POP  BC
             POP  AF
             RET
 
 
 
-#IFDEF      kIncludeUnusedCode
+	IFDEF kIncludeUnusedCode
 ; String: Write backspace to string buffer
 ;   On entry: No parameters required
 ;   On exit:  AF BC DE HL IX IY I AF' BC' DE' HL' preserved
@@ -196,12 +204,12 @@ StrWrBackspace:
             LD   HL,(iStrStart) ;Pointer to start of string buffer
             LD   A,(HL)         ;Get length of string in buffer
             OR   A              ;Null terminator?
-            JR   Z,@Skip        ;Yes, so skip as null string
+            JR   Z,.Skip        ;Yes, so skip as null string
             DEC  HL             ;Decrement string length
-@Skip:      POP  HL
+.Skip:      POP  HL
             POP  AF
             RET
-#ENDIF
+	ENDIF
 
 
 ; String: Write character
@@ -221,9 +229,9 @@ StrWrChar:
             INC  A              ;Inc to skip length byte
             ADD  A,L            ;Add A to start of buffer...
             LD   L,A            ;  to get address for next character
-            JR   NC,@Store
+            JR   NC,.Store
             INC  H
-@Store:     LD   (HL),E         ;Store character in buffer
+.Store:     LD   (HL),E         ;Store character in buffer
             POP  HL
             POP  DE
             POP  AF
@@ -251,10 +259,10 @@ StrWrPadding:
             LD   B,A
             LD   HL,(iStrStart) ;Get start of current string buffer
             SUB  (HL)           ;Compare required length to current
-            JR   C,@End         ;End now if already too long
-            JR   Z,@End         ;End now if already required length
+            JR   C,.End         ;End now if already too long
+            JR   Z,.End         ;End now if already required length
             CALL StrWrSpaces    ;Write required number of spaces
-@End:       POP  HL
+.End:       POP  HL
             POP  BC
             POP  AF
             RET
@@ -276,9 +284,9 @@ StrWrSpace:
 ;   On exit:  AF BC DE HL IX IY I AF' BC' DE' HL' preserved
 StrWrSpaces:
             PUSH AF
-@Loop:      CALL StrWrSpace     ;Print one space character
+.Loop:      CALL StrWrSpace     ;Print one space character
             DEC  A              ;Written all required spaces?
-            JR   NZ,@Loop       ;No, so go write another
+            JR   NZ,.Loop       ;No, so go write another
             POP  AF
             RET
 
@@ -287,7 +295,15 @@ StrWrSpaces:
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iStrStart:  .DW  0x0000         ;Start of current string buffer
 iStrSize:   .DB  0x00           ;Size of current string buffer (0 to Len-1)

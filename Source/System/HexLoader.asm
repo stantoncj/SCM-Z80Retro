@@ -54,15 +54,23 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; HexLoader: Load an intel hex file from the current console input
 ;   On entry: No parameters required
 ;   On exit:  IX IY I AF' BC' DE' HL' preserved
 HexLoad:    LD   C,0            ;Clear checksum of this whole file
-@Line:      CALL InputChar      ;Get first character in record/line
+.Line:      CALL InputChar      ;Get first character in record/line
             CP   kSpace         ;Control character?
-            JR   C,@Line        ;Yes, so discard it
+            JR   C,.Line        ;Yes, so discard it
             CP   kColon         ;Colon?
             RET  NZ             ;No, so return with this character
 ;           LD   C,0            ;Clear checksum for this line only
@@ -88,15 +96,15 @@ HexLoad:    LD   C,0            ;Clear checksum of this whole file
 ; Input any data bytes in this record
             LD   A,B            ;Get number of bytes in record
             OR   A              ;Zero?
-            JR   Z,@Check       ;Yes, so skip..
-@Data:      CALL HexGetByte     ;Get data byte
+            JR   Z,.Check       ;Yes, so skip..
+.Data:      CALL HexGetByte     ;Get data byte
             LD   (DE),A         ;Store data byte in memory
             INC  DE             ;Point to next memory location
             ADD  A,C            ;Add to checksum
             LD   C,A
-            DJNZ @Data
+            DJNZ .Data
 ; Get checksum byte for this record
-@Check:     CALL HexGetByte     ;Get checksum byte
+.Check:     CALL HexGetByte     ;Get checksum byte
             ADD  A,C            ;Add to checksum
             LD   C,A
 ; Should now test checksum for this line, but instead keep a checksum 
@@ -106,19 +114,19 @@ HexLoad:    LD   C,0            ;Clear checksum of this whole file
 ;Test for end of file
             LD   A,H            ;Get record type
             CP   1              ;End of file?
-            JR   NZ,@Line       ;No, so repeat for next record
+            JR   NZ,.Line       ;No, so repeat for next record
 ; End of file so test checksum
-#IFDEF      IncludeMonitor
+	IFDEF IncludeMonitor
             LD   A,C            ;Get checksum
             OR   A              ;It should be zero?
             LD   A,kMsgReady    ;Prepare for checksum ok message
-            JR   Z,@Result      ;Skip if checksum ok
+            JR   Z,.Result      ;Skip if checksum ok
             LD   A,kMsgFileEr   ;File error message number
-@Result:    CALL OutputMessage  ;Output message #A
+.Result:    CALL OutputMessage  ;Output message #A
             XOR  A              ;Return null character
             LD   A,kNewLine
             LD   A,kReturn
-#ENDIF
+	ENDIF
             RET
 
 
@@ -139,7 +147,7 @@ HexGetByte: CALL InputChar      ;Get character from input device
             LD   L,A            ;Store result hi nibble
             CALL InputChar      ;Get character from input device
             CALL ConvertCharToNumber
-            OR   A,L            ;Get result byte
+            OR   L            ;Get result byte
             RET
 
 

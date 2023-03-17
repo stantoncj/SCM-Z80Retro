@@ -10,16 +10,16 @@
 ; These settings assume the main bus clock is 7.3728 MHz
 
 ; Z80 CTC common (all CTCs share this setting)
-#IFNDEF     CTC_CLK_7372800
-#DEFINE     CTC_CLK_7372800     ;7372800 |1843200
-#ENDIF
+	IFNDEF CTC_CLK_7372800
+	DEFINE+ CTC_CLK_7372800 ;7372800 |1843200
+	ENDIF
 
 ; Z80 CTC #2
-#IFNDEF     INCLUDE_CTC_n2
-kCTC2:      .SET 0x8C           ;Base address of Z80 CTC #2
-kDevTick:   .SET kCTC1+2        ;Control register for 200Hz tick
-#DEFINE     INCLUDE_CTC_n2      ;Include CTC #2 support in this build
-#ENDIF
+	IFNDEF INCLUDE_CTC_n2
+kCTC2      = 0x8C           ;Base address of Z80 CTC #2
+kDevTick   = kCTC1+2        ;Control register for 200Hz tick
+	DEFINE+ INCLUDE_CTC_n2 ;Include CTC #2 support in this build
+	ENDIF
 
 
 

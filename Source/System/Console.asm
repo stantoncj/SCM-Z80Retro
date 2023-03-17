@@ -25,7 +25,15 @@
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Console: Initialise console module
 ;   On entry: No parameters required
@@ -69,10 +77,10 @@ InputMore:  CALL IdlePoll       ;Process idle events
             CP   kReturn        ;More (carriage return) ? 
             RET  Z              ;Yes, so return with Z flagged
             CP   kEscape        ;Escape character ?
-            JR   Z,@Escape      ;Yes, so skip
+            JR   Z,.Escape      ;Yes, so skip
             LD   (iConInChar),A ;Store as character waiting
             RET                 ;  and return with NZ flagged
-@Escape:    XOR  A              ;Clear A
+.Escape:    XOR  A              ;Clear A
             CP   1              ;Flag NZ as not a request for more
             RET
 
@@ -85,11 +93,11 @@ InputPreview:
             LD   A,(iConInChar) ;Read from character waiting buffer
             OR   A              ;Is there a character waiting?
             RET  NZ             ;If character is waiting then return it
-@Wait:      CALL JpConIn        ;Wait for input character
-            JR   NZ,@GotOne     ;Skip if we get a character
+.Wait:      CALL JpConIn        ;Wait for input character
+            JR   NZ,.GotOne     ;Skip if we get a character
             CALL IdlePoll       ;Process idle events
-            JR   @Wait          ;Repeat until we get a character
-@GotOne:    LD   (iConInChar),A ;Store as character waiting
+            JR   .Wait          ;Repeat until we get a character
+.GotOne:    LD   (iConInChar),A ;Store as character waiting
             RET
 
 
@@ -101,7 +109,7 @@ InputPreview:
 InputChar:
             LD   A,(iConInChar) ;Read from character waiting buffer
             OR   A              ;Is there a character waiting?
-            JR   Z,@Input       ;No, so go get new character..
+            JR   Z,.Input       ;No, so go get new character..
 ; Return character which is waiting to be read
             PUSH AF             ;Preserve character
             XOR  A              ;Flush waiting buffer by
@@ -109,10 +117,10 @@ InputChar:
             POP  AF             ;Restore character 
             RET
 ; Get new character from console input device
-@Input:     CALL JpConIn        ;Look for input character
+.Input:     CALL JpConIn        ;Look for input character
             RET  NZ             ;Exit if we have a character
             CALL IdlePoll       ;Process idle events
-            JR   @Input         ;No character so keep looking
+            JR   .Input         ;No character so keep looking
 
 
 ; Console input: Check if input character is available
@@ -138,24 +146,24 @@ InputBufConvUpper:
             PUSH AF
             PUSH HL
             LD   HL,(iConInBuf) ;Get start of current input buffer
-@Loop:      LD   A,(HL)         ;Get character from input buffer
+.Loop:      LD   A,(HL)         ;Get character from input buffer
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done here
+            JR   Z,.Done        ;Yes, so we're done here
 ; Do not convert character immediately following an apostrophe
             CP   kApostroph     ;Apostrophe?
-            JR   NZ,@NotApos    ;No, so skip
+            JR   NZ,.NotApos    ;No, so skip
             INC  HL             ;Skip apostrophe
             LD   A,(HL)         ;Get character from input buffer
             OR   A              ;Null string?
-            JR   Z,@Done        ;Yes, so we're done here
-            JR   @Next          ;Go to next character
-@NotApos:
+            JR   Z,.Done        ;Yes, so we're done here
+            JR   .Next          ;Go to next character
+.NotApos:
 ; Convert this character to upper case
             CALL ConvertCharToUCase
             LD   (HL),A         ;Write upper case char to string
-@Next:      INC  HL             ;Point ot next character in string
-            JR   @Loop          ;Loop until end of string
-@Done:      POP  HL
+.Next:      INC  HL             ;Point ot next character in string
+            JR   .Loop          ;Loop until end of string
+.Done:      POP  HL
             POP  AF
             RET
 
@@ -177,7 +185,7 @@ InputLine:  LD   DE,kInputBuff  ;Start of system line buffer
 ;           RET
 
 
-#IFDEF      NOCHANCE
+	IFDEF NOCHANCE
 ; Console input: Edit line in default string buffer
 ;   On entry: No parameters required
 ;   On exit:  DE = Start location of buffer
@@ -194,7 +202,7 @@ InputLineEdit:
             JP   InputLineNow   ;Input line
 ;           CALL InputLineNow   ;Input line
 ;           RET
-#ENDIF
+	ENDIF
 
 
 ; Console input: Input line to user defined buffer
@@ -237,75 +245,75 @@ InputLineNow:
 ; Check if we are overtyping an existing string
             LD   A,(DE)         ;Get first character in buffer
             OR   A              ;Null (zero)?
-            JR   Z,@Input       ;Yes, so skip
+            JR   Z,.Input       ;Yes, so skip
 ; Output current string in buffer
-@Loop1:     CALL OutputChar     ;Output character
+.Loop1:     CALL OutputChar     ;Output character
             INC  DE             ;Point to next character
             LD   A,(DE)         ;Get character from buffer
             OR   A              ;Null (zero)?
-            JR   NZ,@Loop1      ;No, so go output it
+            JR   NZ,.Loop1      ;No, so go output it
 ; Backspace to start of string
-@Loop2:     LD   A,kBackspace   ;ASCII backspace
+.Loop2:     LD   A,kBackspace   ;ASCII backspace
             CALL OutputChar     ;Output backspace
             DEC  DE             ;Back one character
             LD   A,E            ;Get start address of buffer lo byte
             CP   H              ;Start of buffer?
-            JR   NZ,@Loop2      ;No, so go backspace again
+            JR   NZ,.Loop2      ;No, so go backspace again
 ; Input line to buffer
-@Input:     CALL InputChar      ;Wait for input character
+.Input:     CALL InputChar      ;Wait for input character
             BIT  7,A            ;Reject if bit 7 set
-            JR   NZ,@Input
+            JR   NZ,.Input
             CP   kEscape        ;Test if Escape character
-            JR   Z,@Escape
+            JR   Z,.Escape
             CP   kBackspace     ;Test if Delete character
-            JR   Z,@Backspace
+            JR   Z,.Backspace
             CP   kReturn        ;Test if carriage return
-            JR   Z,@Return
+            JR   Z,.Return
             CP   kSpace         ;Reject if control char
-            JR   C,@Input
+            JR   C,.Input
 ; Normal character (ASCII 32 to 126), consider edit mode
 ; If start of line and in edit mode, erase the line
             PUSH AF
             LD   A,E            ;Get start address of buffer lo byte
             CP   H              ;Start of buffer?
-            JR   NZ,@EndErase   ;No, so skip
+            JR   NZ,.EndErase   ;No, so skip
             LD   A,(DE)         ;Get first character in line
             OR   A              ;Anything to edit?
-            JR   Z,@EndErase    ;No, so skip
+            JR   Z,.EndErase    ;No, so skip
 ; Erase string being edited
-@Loop3:     LD   A,kSpace       ;ASCII space
+.Loop3:     LD   A,kSpace       ;ASCII space
             CALL OutputChar     ;Erase character from terminal
             XOR  A
             LD   (DE),A         ;Erase character from buffer
             INC  DE             ;Point to next character
             LD   A,(DE)         ;Get character from buffer
             OR   A              ;Null (zero)?
-            JR   NZ,@Loop3      ;No, so go output it
-@Loop4:     LD   A,kBackspace   ;ASCII backspace
+            JR   NZ,.Loop3      ;No, so go output it
+.Loop4:     LD   A,kBackspace   ;ASCII backspace
             CALL OutputChar     ;Output backspace
             DEC  DE             ;Back one character
             LD   A,E            ;Get start address of buffer lo byte
             CP   H              ;Start of buffer?
-            JR   NZ,@Loop4      ;No, so go backspace again
-@EndErase:  POP  AF
+            JR   NZ,.Loop4      ;No, so go backspace again
+.EndErase:  POP  AF
 ; Normal character (ASCII 32 to 126), write to buffer
             LD   (DE),A         ;Store character in buffer
             LD   A,E            ;Get current address lo byte
             CP   L              ;Buffer full?
-            JR   Z,@Input       ;Yes, so don't increment pointer
+            JR   Z,.Input       ;Yes, so don't increment pointer
             LD   A,(DE)         ;No, so..
             CALL OutputChar     ;  echo character just input
             INC  DE             ;  and increment buffer pointer
-            JR   @Input
+            JR   .Input
 ; Escape character
-@Escape:    CALL OutputNewLine  ;Output new line character(s)
+.Escape:    CALL OutputNewLine  ;Output new line character(s)
             LD   A,kEscape
             CP   A              ;Set zero flag but with A = kEscape
-            JR   @Exit
+            JR   .Exit
 ; Delete character
-@Backspace: LD   A,E            ;Get start address of buffer lo byte
+.Backspace: LD   A,E            ;Get start address of buffer lo byte
             CP   H              ;Start of buffer?
-            JR   Z,@Input       ;Yes, so nothing to delete
+            JR   Z,.Input       ;Yes, so nothing to delete
             LD   A,kBackspace   ;ASCII backspace
             CALL OutputChar     ;Output backspace
             LD   A,kSpace       ;ASCII space
@@ -315,14 +323,14 @@ InputLineNow:
             DEC  DE             ;Decrement buffer pointer
             XOR  A
             LD   (DE),A         ;Mark end of string with null
-            JR   @Input
+            JR   .Input
 ; Carriage return
-@Return:    XOR  A              ;Clear A to a null character (zero)
+.Return:    XOR  A              ;Clear A to a null character (zero)
             LD   (DE),A         ;Store null to terminate string in buffer
             CALL OutputNewLine  ;Output new line character(s)
             LD   A,E            ;Calculate number of characters
-            SUB  A,H            ;  in input buffer
-@Exit:      POP  HL
+            SUB  H            ;  in input buffer
+.Exit:      POP  HL
             POP  DE
             RET
 
@@ -339,15 +347,15 @@ InputLineNow:
 OutputChar:
             PUSH AF
             CP   kNewLine       ;New line character?
-            JR   NZ,@NotNL      ;No, so skip
+            JR   NZ,.NotNL      ;No, so skip
             LD   A,kReturn      ;Yes, so output physical new line
-@Wait1:     CALL JpConOut       ;  to console..
-            JR   Z,@Wait1
+.Wait1:     CALL JpConOut       ;  to console..
+            JR   Z,.Wait1
             LD   A,kLinefeed
-@NotNL:
-@Wait2:     CALL JpConOut       ;Output character to console
-            JR   Z,@Wait2
-@Exit:      POP  AF
+.NotNL:
+.Wait2:     CALL JpConOut       ;Output character to console
+            JR   Z,.Wait2
+.Exit:      POP  AF
             RET
 
 
@@ -371,13 +379,13 @@ OutputNewLine:
 ; Supports \n for new line
 OutputZString:
             PUSH AF
-@Next:      LD   A,(DE)         ;Get character from string
+.Next:      LD   A,(DE)         ;Get character from string
             INC  DE             ;Point to next character
             OR   A              ;Null terminator?
-            JR   Z,@Finished    ;Yes, so we've finished
+            JR   Z,.Finished    ;Yes, so we've finished
             CALL OutputChar     ;Output character
-            JR   @Next          ;Go process next character
-@Finished:  POP  AF
+            JR   .Next          ;Go process next character
+.Finished:  POP  AF
             RET
 
 
@@ -386,7 +394,7 @@ OutputZString:
 ; **********************************************************************
 
 
-#IFNDEF     IncludeUtilities
+	IFNDEF IncludeUtilities
 ; This function is normal provided by the Utilities module, but if this 
 ; build does not include Utilities then assemble the function here.
 ; Utility: Convert character to upper case
@@ -400,14 +408,22 @@ ConvertCharToUCase:
             RET  NC             ;Yes, so finished
             SUB  'a'-'A'        ;Convert case
             RET
-#ENDIF
+	ENDIF
 
 
 ; **********************************************************************
 ; **  Private workspace (in RAM)                                      **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iConInChar: .DB  0x00           ;Console input character waiting
 iConInBuf:  .DW  0x0000         ;Console input buffer start

@@ -18,29 +18,56 @@
 ; **********************************************************************
 
 ; Message numbers
-kMsgMonFst  .EQU 0x20           ;First monitor message
-kMsgBadCmd: .EQU kMsgMonFst+0   ;Bad commandr
-kMsgBadPar: .EQU kMsgMonFst+1   ;Bad parameter
-kMsgSyntax: .EQU kMsgMonFst+2   ;Syntax error
-kMsgBPSet:  .EQU kMsgMonFst+3   ;Breakpoint set
-kMsgBPClr:  .EQU kMsgMonFst+4   ;Breakpoint cleared
-kMsgBPFail: .EQU kMsgMonFst+5   ;Unable to set breakpoint here
-kMsgHelp:   .EQU kMsgMonFst+6   ;Help text
-kMsgNotAv:  .EQU kMsgMonFst+7   ;Feature not included
-kMsgMReady: .EQU kMsgMonFst+8   ;Ready
-kMsgMFileE: .EQU kMsgMonFst+9   ;File error
-kMsgMonLst: .EQU kMsgMFileE     ;Last monitor message
+kMsgMonFst  = 0x20           ;First monitor message
+kMsgBadCmd = kMsgMonFst+0   ;Bad commandr
+kMsgBadPar = kMsgMonFst+1   ;Bad parameter
+kMsgSyntax = kMsgMonFst+2   ;Syntax error
+kMsgBPSet  = kMsgMonFst+3   ;Breakpoint set
+kMsgBPClr  = kMsgMonFst+4   ;Breakpoint cleared
+kMsgBPFail = kMsgMonFst+5   ;Unable to set breakpoint here
+kMsgHelp   = kMsgMonFst+6   ;Help text
+kMsgNotAv  = kMsgMonFst+7   ;Feature not included
+kMsgMReady = kMsgMonFst+8   ;Ready
+kMsgMFileE = kMsgMonFst+9   ;File error
+kMsgMonLst = kMsgMFileE     ;Last monitor message
 
 
 ; **********************************************************************
 ; **  Public functions                                                **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-            .ORG  kMonData      ;Establish workspace/data area
+;	.ORG - Reset PC for the correct context
+	LUA ALLPASS
+		if in_code then
+			code_pc = _c("kMonData")
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		else
+			data_pc = _c("kMonData")
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
-            .CODE
+;	.CODE - Switch context to Code PC
+	LUA ALLPASS
+		if not in_code then
+			data_pc = sj.current_address
+			in_code = true
+			_pc(".ORG 0x"..string.format("%04X",code_pc))
+			_pc("OUTPUT "..build_dir.."code_output_"..string.format("%04X",code_pc)..".bin")
+		end
+	ENDLUA
 
 ; Entry points
 M_MonInit:  JP   MonInit
@@ -52,14 +79,14 @@ M_SkipDeli: JP   CLISkipDelim
 M_SkipNone: JP   CLISkipNonDeli
 M_GetHexPa: JP   CLIGetHexParam
 
-#IFNDEF     IncludeCommands
+	IFNDEF IncludeCommands
 CLILoop:
 CLIExecute:
 CLISkipDelim:
 CLISkipNonDeli:
 CLIGetHexParam:
             RET
-#ENDIF
+	ENDIF
 
 
 ; Monitor: Initialise monitor
@@ -71,9 +98,9 @@ MonInit:
             ;RST  0x30          ;Call API
             CALL JpAPI          ;Call API
 
-#IFDEF      IncludeBreakpoint
+	IFDEF IncludeBreakpoint
             CALL BPInitialise   ;Initialise breakpoint module
-#ENDIF
+	ENDIF
 
             RET
 
@@ -139,7 +166,7 @@ szMReady:   .DB  "Ready",kNewLine,kNull
 szMFileErr: .DB  "File error",kNewLine,kNull
 
 szCmdHelp:
-#IFDEF      IncludeHelp
+	IFDEF IncludeHelp
             .DB  "Monitor commands:",kNewLine
 ; Single character commands         20        30        40        50        60        70        80
 ;                 12345678901234567890123456789012345678901234567890123456789012345678901234567890
@@ -154,12 +181,12 @@ szCmdHelp:
             .DB  "FILL <start> <end> <byte>        |  API <function> [<A>] [<DE>]",kNewLine
             .DB  "DEVICES, DIR, HELP, RESET",kNewLine
 ; Optional commands
-#IFDEF      IncludeScripting
+	IFDEF IncludeScripting
             .DB  "Scripting commands:",kNewLine
             .DB  "RUN, SCRIPT (list), OLD, NEW",kNewLine
-#ENDIF
+	ENDIF
 ;           .DB  kNewLine
-#ENDIF
+	ENDIF
             .DB  kNull
 
 
@@ -179,7 +206,15 @@ MsgTabMon:  .DW  szBadCmd
 ; **  Global workspace                                                **
 ; **********************************************************************
 
-            .DATA
+;	.DATA - Switch context to Data PC
+	LUA ALLPASS
+		if in_code then
+			code_pc = sj.current_address
+			in_code = false
+			_pc(".ORG 0x"..string.format("%04X",data_pc))
+			_pc("OUTPUT "..build_dir.."data_output_"..string.format("%04X",data_pc)..".bin")
+		end
+	ENDLUA
 
 iRegisters:
 ; Order is hard coded so do not change (see strings above)
