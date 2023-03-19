@@ -56,6 +56,11 @@ kBiosRevis = 0              ;Bios version revision
 	INCLUDE BIOS/Framework/Devices/BankedRAM_SC2.asm
 	ENDIF
 
+; Banked RAM type ZR1
+	IFDEF INCLUDE_BankedRAM_ZR1
+	INCLUDE BIOS/Framework/Devices/BankedRAM_ZR1.asm
+	ENDIF
+
 ; Banked ROM type SC1
 	IFDEF INCLUDE_BankedROM_SC1
 	INCLUDE BIOS/Framework/Devices/BankedROM_SC1.asm
@@ -85,13 +90,15 @@ SIO_n1_rc:
 ; SIO #1 following the typical Zilog register order
 	IFDEF INCLUDE_SIO_n1_std
 kSIOBase   = kSIO1          ;I/O base address
-kSIOACont  = kSIOBase+2     ;I/O address of control register A
-kSIOAData  = kSIOBase+0     ;I/O address of data register A
-kSIOBCont  = kSIOBase+3     ;I/O address of control register B
-kSIOBData  = kSIOBase+1     ;I/O address of data register B
+kSIOBase   = 0x80           ;Base address of serial Z80 SIO
+kSIOACont  = kSIOBase+3     ;I/O address of control register A
+kSIOAData  = kSIOBase+1     ;I/O address of data register A
+kSIOBCont  = kSIOBase+2     ;I/O address of control register B
+kSIOBData  = kSIOBase+0     ;I/O address of data register B
 kSIOFlags  = 0b00000010     ;Hardware flags = SIO #1
-kSIOACTC   = kSIO1ACTC      ;I/O address of linked CTC port A
-kSIOBCTC   = kSIO1BCTC      ;I/O address of linked CTC port A
+; No CTC
+kSIOACTC  = 0        ;Port A's CTC register (0 if n/a)
+kSIOBCTC  = 0        ;Port B's CTC register (0 if n/a)
 SIO_n1_std:
 	DEFINE+ SIO_TYPE " " ;or "(std) "
 	INCLUDE BIOS/Framework/Devices/SIO.asm

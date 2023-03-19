@@ -1,0 +1,37 @@
+scmworklog.txt
+
+Worklog for modifying SCM for Z80CPU Rev 2.2 By P.Wilson
+
+Strategy:
+
+- On startup, we need to set the FLASH/ROM banks correctly so that RAM is exposed
+- Need to setup the SIO with the non-standard layout of the selects
+- Need to calculate the baud correctly to be able to communicate
+
+> Should boot into SCM at this point
+
+- Copy SCM to RAM and switch off flash
+- Boot Basic
+
+- Other modules:
+- Initialize and recognize CTC
+- Test CTC w/SIO?  Does SCM have this pre-built?
+- RTC set/read?
+- I2C
+- SPI
+- SD Cards
+- Boot CPM from SD card
+
+Step 1: Modify main for new config file, add new config
+
+Created config/config_10_Z80Retro.asm
+Included in !Main.asm, commented out config_f1_SC516_118.asm
+
+Make is good!
+
+Step 2: Create a new module
+
+Created Z80Retro.asm Module
+
+
+

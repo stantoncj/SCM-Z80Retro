@@ -97,8 +97,27 @@ H_Test:     DI
             OUT0 (CBR), A       ;  Common Base = 0x88000 to 0x8FFFF
 ;           LD   A, 0x80        ;Logical memory base addresses:
             OUT0 (CBAR), A      ;  Bank = 0x0000, Common = 0x8000
-	ENDIF
+	ENDIF 
 
+	ENDIF ; Processor Z180
+
+; Initialize the Z80Retro Memory Banks
+; The Z80Retro starts with all ROM enabled
+; Configure bottom 32K as ROM and top 32K as RAM 
+
+    IFDEF INCLUDE_BankedRAM_ZR1
+            ld a,0x00   			; $0000 = FLASH bank 0
+            OUT (kBankPrt),A
+            inc A
+            OUT (kBankPrt+1),A	    ; $4000 = FLASH bank 1
+
+            ld a,0x20   			; $8000 = RAM bank 0
+            OUT (kBankPrt+2),A
+            inc a					; $C000 = RAM bank 1
+            OUT (kBankPrt+3),A
+
+            ld a,0x05               ; set bit 0 to enable paging, turn on LED1 (bit 2) for self test
+            OUT (kBankSel),a	    ; turn on paging, turns off all LEDs
 	ENDIF
 
 ; Special for SC114 style status LED
@@ -217,6 +236,12 @@ H_Test:     DI
 	IFDEF INCLUDE_StatusLED
             ;XOR  A
             OUT  (kPrtLED),A    ;Turn off motherboard/status LED
+	ENDIF
+
+; Special for ZR style shared port LED
+    IFDEF INCLUDE_BankedRAM_ZR1
+            ld a,0x01               ; Turn off LED1, leave on paging
+            OUT (kBankSel),a	    ; 
 	ENDIF
 
             JP   CStrt          ;Cold start system
