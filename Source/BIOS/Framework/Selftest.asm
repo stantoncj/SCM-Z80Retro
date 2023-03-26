@@ -110,14 +110,31 @@ H_Test:     DI
             OUT (kBankPrt),A
             inc A
             OUT (kBankPrt+1),A	    ; $4000 = FLASH bank 1
-
             ld a,0x20   			; $8000 = RAM bank 0
             OUT (kBankPrt+2),A
             inc a					; $C000 = RAM bank 1
             OUT (kBankPrt+3),A
-
+            
             ld a,0x05               ; set bit 0 to enable paging, turn on LED1 (bit 2) for self test
-            OUT (kBankSel),a	    ; turn on paging, turns off all LEDs
+            OUT (kBankSel),a	    ; turn on paging, LEDS
+
+            ld hl, 0x0000           ; Copy first 32k flash ROM bank 0 + 1 to RAM bank 0 + 1
+            ld de, 0x8000
+            ld bc, 0x8000
+            ldir
+
+            ld a,0x20               
+            OUT (kBankPrt),A        ; remap RAM bank 0 to 0x0000 (mind the gap)
+            inc A
+            OUT (kBankPrt+1),A	    ; remap RAM bank 1 to 0x4000
+            inc a        			
+            OUT (kBankPrt+2),A      ; remap RAM bank 2 to 0x4000
+            inc a					
+            OUT (kBankPrt+3),A      ; remap RAM bank 3 to 0x4000
+
+            ld a, 0x09              ; turn on LED #2
+            OUT (kBankSel),a
+
 	ENDIF
 
 ; Special for SC114 style status LED
