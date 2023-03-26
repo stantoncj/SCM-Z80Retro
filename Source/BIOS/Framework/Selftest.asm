@@ -104,6 +104,7 @@ H_Test:     DI
 ; Initialize the Z80Retro Memory Banks
 ; The Z80Retro starts with all ROM enabled
 ; Configure bottom 32K as ROM and top 32K as RAM 
+; Then copy 32K ROM to RAM and remap as all RAM
 
     IFDEF INCLUDE_BankedRAM_ZR1
             ld a,0x00   			; $0000 = FLASH bank 0
