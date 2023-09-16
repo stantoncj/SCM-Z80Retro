@@ -16,7 +16,7 @@ Caveats:
 --------
 * Currently this is not using the CTC for the UART
 * I'm using a 20Mhz Z80 with a 14.7456 Mhz clock to make the UART behave
-* It has Basic, but does not have the CPM Loader Working
+* It has Grant Searle Basic, but does not have the CPM Loader Working
 * It uses all RAM by copying the ROMS and bank switching them out
 
 The board needs to be configured with these jumpers (mostly for the SIO):
